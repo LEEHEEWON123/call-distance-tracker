@@ -1,17 +1,43 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'screens/splash_screen.dart';
+import 'screens/home_screen.dart';
+import 'screens/waiting_screen.dart';
+import 'screens/map_screen.dart';
+import 'models/location_request.dart';
 
 class App extends StatelessWidget {
   const App({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
+    return MaterialApp(
       title: 'Call Distance Tracker',
-      home: Scaffold(
-        body: Center(
-          child: Text('Call Distance Tracker'),
-        ),
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF007AFF)),
+        useMaterial3: true,
       ),
+      initialRoute: '/',
+      onGenerateRoute: (settings) {
+        switch (settings.name) {
+          case '/':
+            return MaterialPageRoute(builder: (_) => const SplashScreen());
+          case '/home':
+            return MaterialPageRoute(builder: (_) => const HomeScreen());
+          case '/waiting':
+            final token = settings.arguments as String;
+            return MaterialPageRoute(
+              builder: (_) => WaitingScreen(token: token),
+            );
+          case '/map':
+            final req = settings.arguments as LocationRequest;
+            return MaterialPageRoute(
+              builder: (_) => MapScreen(locationRequest: req),
+            );
+          default:
+            return MaterialPageRoute(builder: (_) => const HomeScreen());
+        }
+      },
     );
   }
 }
