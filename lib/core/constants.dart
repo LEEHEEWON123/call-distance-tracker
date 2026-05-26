@@ -1,8 +1,8 @@
 class AppConstants {
-  // TODO: Supabase 대시보드 Settings > API에서 복사
-  static const supabaseUrl = 'https://YOUR_PROJECT_ID.supabase.co';
-  static const supabaseAnonKey = 'YOUR_ANON_KEY';
+  static const supabaseUrl = 'https://tcyfyxaccskgncexirxj.supabase.co';
+  static const supabaseAnonKey =
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRjeWZ5eGFjY3NrZ25jZXhpcnhqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3NzQ0NDksImV4cCI6MjA5NTM1MDQ0OX0.XF0WzJlFSITpe3HL4M0O8Zq7QXsjZ_WR2mFY-9s1h6o';
 
-  // Edge Function URL (Task 9에서 배포 후 업데이트)
+  // Edge Function URL (배포 후 자동으로 올바른 URL 사용)
   static const consentBaseUrl = '$supabaseUrl/functions/v1/consent';
 }
