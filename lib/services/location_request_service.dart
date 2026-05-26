@@ -1,6 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
-import '../core/constants.dart';
 import '../core/supabase_client.dart';
 import '../models/location_request.dart';
 
