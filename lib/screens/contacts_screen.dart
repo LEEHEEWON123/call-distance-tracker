@@ -28,7 +28,7 @@ class ContactsScreen extends ConsumerWidget {
     final requestingPhone = ref.watch(requestingPhoneProvider);
 
     return Container(
-      color: const Color(0xFFf0f8f5),
+      color: const Color(0xFFf2f2f2),
       child: Column(
         children: [
           _SearchBar(query: query, ref: ref),
@@ -122,7 +122,7 @@ class _SearchBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Colors.white,
+      color: const Color(0xFFf2f2f2),
       padding: const EdgeInsets.fromLTRB(16, 28, 16, 14),
       child: TextField(
         decoration: InputDecoration(
@@ -134,14 +134,14 @@ class _SearchBar extends StatelessWidget {
           ),
           prefixIconConstraints: const BoxConstraints(minWidth: 52),
           filled: true,
-          fillColor: const Color(0xFFf0f8f5),
+          fillColor: const Color(0xFFf2f2f2),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(14),
-            borderSide: const BorderSide(color: Color(0xFFd4ede6), width: 1.5),
+            borderSide: const BorderSide(color: Color(0xFFf2f2f2), width: 1.5),
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(14),
-            borderSide: const BorderSide(color: Color(0xFFd4ede6), width: 1.5),
+            borderSide: const BorderSide(color: Color(0xFFf2f2f2), width: 1.5),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(14),
