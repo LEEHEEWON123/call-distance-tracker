@@ -1,0 +1,5 @@
+[functions.consent]
+verify_jwt = false
+
+[functions.submit-location]
+verify_jwt = false
