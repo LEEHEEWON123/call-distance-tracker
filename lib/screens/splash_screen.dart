@@ -32,7 +32,10 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     // 3. 전화 상태 권한 요청
     await Permission.phone.request();
 
-    // 4. 홈 화면으로 이동
+    // 4. 연락처 권한 요청
+    await Permission.contacts.request();
+
+    // 5. 홈 화면으로 이동
     if (mounted) {
       Navigator.of(context).pushReplacementNamed('/home');
     }
