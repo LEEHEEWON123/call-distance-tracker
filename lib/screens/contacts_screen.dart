@@ -487,10 +487,7 @@ class _ContactCard extends ConsumerWidget {
       ref.read(activeTokenProvider.notifier).state = token;
       ref.read(requestingPhoneProvider.notifier).state = phoneNumber;
 
-      final shareText = LocationRequestService.buildSmsMessage(
-        token,
-        AppConstants.consentBaseUrl,
-      );
+      final shareText = LocationRequestService.buildShareMessage(token);
       await Share.share(shareText);
 
       if (context.mounted) {
