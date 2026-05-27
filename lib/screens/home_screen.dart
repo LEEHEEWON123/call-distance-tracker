@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:share_plus/share_plus.dart';
 import '../core/constants.dart';
 import '../core/device_id.dart';
 import '../providers/phone_state_provider.dart';
@@ -92,15 +92,11 @@ class HomeScreen extends ConsumerWidget {
 
       ref.read(activeTokenProvider.notifier).state = token;
 
-      final smsBody = LocationRequestService.buildSmsMessage(
+      final shareText = LocationRequestService.buildSmsMessage(
         token,
         AppConstants.consentBaseUrl,
       );
-      final uri = Uri.parse('sms:?body=${Uri.encodeComponent(smsBody)}');
-
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri);
-      }
+      await Share.share(shareText);
 
       if (context.mounted) {
         Navigator.of(context).pushNamed('/waiting', arguments: token);

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:share_plus/share_plus.dart';
 import '../core/constants.dart';
 import '../core/device_id.dart';
 import '../providers/contacts_provider.dart';
@@ -161,16 +161,11 @@ class _ContactTile extends ConsumerWidget {
 
       ref.read(activeTokenProvider.notifier).state = token;
 
-      final smsBody = LocationRequestService.buildSmsMessage(
+      final shareText = LocationRequestService.buildSmsMessage(
         token,
         AppConstants.consentBaseUrl,
       );
-      final uri = Uri.parse(
-          'sms:${Uri.encodeComponent(phoneNumber)}?body=${Uri.encodeComponent(smsBody)}');
-
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri);
-      }
+      await Share.share(shareText);
 
       if (context.mounted) {
         Navigator.of(context).pushNamed('/waiting', arguments: token);
