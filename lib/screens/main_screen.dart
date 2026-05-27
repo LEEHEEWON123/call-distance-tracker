@@ -1,16 +1,25 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http/http.dart' as http;
+import '../core/constants.dart';
+import '../models/location_request.dart';
+import '../providers/incoming_request_provider.dart';
+import '../services/location_request_service.dart';
+import '../services/location_service.dart';
 import 'home_screen.dart';
 import 'contacts_screen.dart';
 
-class MainScreen extends StatefulWidget {
+class MainScreen extends ConsumerStatefulWidget {
   const MainScreen({super.key});
 
   @override
-  State<MainScreen> createState() => _MainScreenState();
+  ConsumerState<MainScreen> createState() => _MainScreenState();
 }
 
-class _MainScreenState extends State<MainScreen> {
+class _MainScreenState extends ConsumerState<MainScreen> {
   int _currentIndex = 0;
+  String? _lastShownToken; // 중복 다이얼로그 방지
 
   static const _screens = [
     HomeScreen(),
@@ -18,7 +27,80 @@ class _MainScreenState extends State<MainScreen> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    // 수신 요청 리스닝은 build 이후 ref.listen으로 처리
+  }
+
+  void _onIncomingRequest(LocationRequest req) {
+    if (_lastShownToken == req.token) return; // 이미 표시한 요청
+    _lastShownToken = req.token;
+    _showRequestDialog(req);
+  }
+
+  void _showRequestDialog(LocationRequest req) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isDismissible: false,
+      builder: (ctx) => _IncomingRequestSheet(
+        request: req,
+        onAccept: () async {
+          Navigator.of(ctx).pop();
+          await _acceptRequest(req);
+        },
+        onReject: () async {
+          Navigator.of(ctx).pop();
+          await LocationRequestService.rejectRequest(req.token);
+        },
+      ),
+    );
+  }
+
+  Future<void> _acceptRequest(LocationRequest req) async {
+    try {
+      final pos = await LocationService.getCurrentPosition();
+      final res = await http.post(
+        Uri.parse('${AppConstants.submitLocationUrl}/${req.token}'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'lat': pos.latitude, 'lng': pos.longitude}),
+      );
+      if (!mounted) return;
+      if (res.statusCode == 200) {
+        final updated = LocationRequest(
+          id: req.id,
+          token: req.token,
+          requesterId: req.requesterId,
+          requesterLat: req.requesterLat,
+          requesterLng: req.requesterLng,
+          responderLat: pos.latitude,
+          responderLng: pos.longitude,
+          status: LocationRequestStatus.completed,
+          createdAt: req.createdAt,
+          expiresAt: req.expiresAt,
+        );
+        Navigator.of(context).pushNamed('/map', arguments: updated);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('오류: $e')),
+      );
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    // 수신 요청 구독
+    ref.listen<AsyncValue<LocationRequest?>>(
+      incomingRequestProvider,
+      (_, next) {
+        next.whenData((req) {
+          if (req != null) _onIncomingRequest(req);
+        });
+      },
+    );
+
     return Scaffold(
       backgroundColor: const Color(0xFFf4f7fb),
       body: IndexedStack(
@@ -40,6 +122,125 @@ class _MainScreenState extends State<MainScreen> {
           BottomNavigationBarItem(
             icon: _ContactsTabIcon(active: _currentIndex == 1),
             label: '연락처',
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── 수신 요청 바텀시트 ──────────────────────────────────────
+class _IncomingRequestSheet extends StatelessWidget {
+  final LocationRequest request;
+  final VoidCallback onAccept;
+  final VoidCallback onReject;
+
+  const _IncomingRequestSheet({
+    required this.request,
+    required this.onAccept,
+    required this.onReject,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+      ),
+      padding: const EdgeInsets.fromLTRB(24, 28, 24, 32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              color: const Color(0xFFfff0e6),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Center(
+              child: Text('📍', style: TextStyle(fontSize: 28)),
+            ),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            '위치 공유 요청',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF1c2333),
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            '상대방이 현재 위치 확인을 요청했습니다.\n허용하면 내 위치가 즉시 공유됩니다.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 13,
+              color: Color(0xFF96a3b4),
+              height: 1.6,
+            ),
+          ),
+          const SizedBox(height: 28),
+          Row(
+            children: [
+              Expanded(
+                child: GestureDetector(
+                  onTap: onReject,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFf4f7fb),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    alignment: Alignment.center,
+                    child: const Text(
+                      '거절',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF96a3b4),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: GestureDetector(
+                  onTap: onAccept,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFf5a060), Color(0xFFe07830)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFFe07830).withValues(alpha: 0.3),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    alignment: Alignment.center,
+                    child: const Text(
+                      '위치 공유 허용',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),

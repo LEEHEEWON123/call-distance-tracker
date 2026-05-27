@@ -1,4 +1,4 @@
-enum LocationRequestStatus { pending, completed, expired }
+enum LocationRequestStatus { pending, completed, expired, rejected }
 
 class LocationRequest {
   final String id;
@@ -8,6 +8,7 @@ class LocationRequest {
   final double requesterLng;
   final double? responderLat;
   final double? responderLng;
+  final String? responderPhone;
   final LocationRequestStatus status;
   final DateTime createdAt;
   final DateTime expiresAt;
@@ -20,6 +21,7 @@ class LocationRequest {
     required this.requesterLng,
     this.responderLat,
     this.responderLng,
+    this.responderPhone,
     required this.status,
     required this.createdAt,
     required this.expiresAt,
@@ -39,6 +41,7 @@ class LocationRequest {
       requesterLng: (json['requester_lng'] as num).toDouble(),
       responderLat: (json['responder_lat'] as num?)?.toDouble(),
       responderLng: (json['responder_lng'] as num?)?.toDouble(),
+      responderPhone: json['responder_phone'] as String?,
       status: _parseStatus(json['status'] as String),
       createdAt: DateTime.parse(json['created_at'] as String),
       expiresAt: DateTime.parse(json['expires_at'] as String),
@@ -51,6 +54,8 @@ class LocationRequest {
         return LocationRequestStatus.completed;
       case 'expired':
         return LocationRequestStatus.expired;
+      case 'rejected':
+        return LocationRequestStatus.rejected;
       default:
         return LocationRequestStatus.pending;
     }

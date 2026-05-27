@@ -482,6 +482,7 @@ class _ContactCard extends ConsumerWidget {
         requesterId: deviceId,
         requesterLat: position.latitude,
         requesterLng: position.longitude,
+        responderPhone: phoneNumber.replaceAll(RegExp(r'[\s\-]'), ''),
       );
 
       ref.read(activeTokenProvider.notifier).state = token;

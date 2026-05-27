@@ -11,6 +11,7 @@ class LocationRequestService {
     required String requesterId,
     required double requesterLat,
     required double requesterLng,
+    String? responderPhone,
   }) async {
     final token = const Uuid().v4();
     await supabase.from(_table).insert({
@@ -18,11 +19,12 @@ class LocationRequestService {
       'requester_id': requesterId,
       'requester_lat': requesterLat,
       'requester_lng': requesterLng,
+      if (responderPhone != null) 'responder_phone': responderPhone,
     });
     return token;
   }
 
-  /// 특정 토큰의 레코드 변경을 실시간 수신
+  /// 특정 토큰의 레코드 변경을 실시간 수신 (요청자 측)
   static Stream<LocationRequest> watchRequest(String token) {
     return supabase
         .from(_table)
@@ -33,6 +35,32 @@ class LocationRequestService {
           return LocationRequest.fromJson(rows.first);
         })
         .where((req) => req.status == LocationRequestStatus.completed);
+  }
+
+  /// 내 전화번호로 수신된 pending 요청 구독 (응답자 측)
+  static Stream<LocationRequest?> watchIncomingRequests(String myPhone) {
+    return supabase
+        .from(_table)
+        .stream(primaryKey: ['id'])
+        .eq('responder_phone', myPhone)
+        .map((rows) {
+          final pending = rows.where((r) {
+            if (r['status'] != 'pending') return false;
+            final expires = DateTime.tryParse(r['expires_at'] as String? ?? '');
+            if (expires == null) return false;
+            return expires.isAfter(DateTime.now());
+          }).toList();
+          if (pending.isEmpty) return null;
+          return LocationRequest.fromJson(pending.first);
+        });
+  }
+
+  /// 요청 거절
+  static Future<void> rejectRequest(String token) async {
+    await supabase
+        .from(_table)
+        .update({'status': 'rejected'})
+        .eq('token', token);
   }
 
   /// 딥링크 공유 메시지 생성 (nearmates://consent/TOKEN)
@@ -48,7 +76,7 @@ class LocationRequestService {
   /// 토큰으로 요청 정보 조회 (동의 화면용)
   static Future<Map<String, dynamic>?> getRequestByToken(String token) async {
     final res = await supabase
-        .from('location_requests')
+        .from(_table)
         .select('status, expires_at, requester_lat, requester_lng')
         .eq('token', token)
         .maybeSingle();
