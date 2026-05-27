@@ -9,7 +9,6 @@ import '../providers/location_request_provider.dart';
 import '../services/location_service.dart';
 import '../services/location_request_service.dart';
 
-// 아바타 색상 팔레트 (HTML과 동일)
 const _avatarGradients = [
   [Color(0xFF93b5e1), Color(0xFF7098c8)],
   [Color(0xFFf5a878), Color(0xFFe88855)],
@@ -26,6 +25,7 @@ class ContactsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final contactsAsync = ref.watch(filteredContactsProvider);
     final query = ref.watch(contactSearchQueryProvider);
+    final requestingPhone = ref.watch(requestingPhoneProvider);
 
     return Container(
       color: const Color(0xFFf0f8f5),
@@ -34,22 +34,50 @@ class ContactsScreen extends ConsumerWidget {
           _SearchBar(query: query, ref: ref),
           Expanded(
             child: contactsAsync.when(
-              data: (contacts) => contacts.isEmpty
-                  ? const Center(child: Text('연락처가 없습니다.'))
-                  : ListView.builder(
-                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-                      itemCount: contacts.length,
-                      itemBuilder: (context, i) =>
-                          _ContactCard(contact: contacts[i], index: i),
-                    ),
+              data: (contacts) {
+                if (contacts.isEmpty) {
+                  return const Center(child: Text('연락처가 없습니다.'));
+                }
+
+                // 요청 중인 연락처 분리
+                final requesting = requestingPhone != null
+                    ? contacts.where((c) => c.phones.any(
+                        (p) => _normalise(p.number) == _normalise(requestingPhone))).toList()
+                    : <Contact>[];
+                final others = contacts.where((c) => !requesting.contains(c)).toList();
+
+                return ListView(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                  children: [
+                    // ── 요청 중 섹션 ──
+                    if (requesting.isNotEmpty) ...[
+                      const _SectionLabel(label: '요청 중'),
+                      ...requesting.map((c) => _ContactCard(
+                        contact: c,
+                        index: contacts.indexOf(c),
+                        isRequesting: true,
+                        onCancel: () {
+                          ref.read(requestingPhoneProvider.notifier).state = null;
+                          ref.read(activeTokenProvider.notifier).state = null;
+                        },
+                      )),
+                      const _SectionLabel(label: '연락처'),
+                    ],
+                    // ── 전체 연락처 ──
+                    ...others.asMap().entries.map((e) => _ContactCard(
+                      contact: e.value,
+                      index: e.key,
+                      isRequesting: false,
+                    )),
+                  ],
+                );
+              },
               loading: () => const Center(
                 child: CircularProgressIndicator(color: Color(0xFF5aaa85)),
               ),
               error: (e, _) => Center(
-                child: Text(
-                  '연락처를 불러올 수 없습니다.\n$e',
-                  textAlign: TextAlign.center,
-                ),
+                child: Text('연락처를 불러올 수 없습니다.\n$e',
+                    textAlign: TextAlign.center),
               ),
             ),
           ),
@@ -57,8 +85,34 @@ class ContactsScreen extends ConsumerWidget {
       ),
     );
   }
+
+  static String _normalise(String phone) =>
+      phone.replaceAll(RegExp(r'\D'), '');
 }
 
+// ── 섹션 헤더 ────────────────────────────────────────────
+class _SectionLabel extends StatelessWidget {
+  final String label;
+  const _SectionLabel({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 8, bottom: 6, left: 4),
+      child: Text(
+        label.toUpperCase(),
+        style: const TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: Color(0xFF96a3b4),
+          letterSpacing: 0.6,
+        ),
+      ),
+    );
+  }
+}
+
+// ── 검색바 ───────────────────────────────────────────────
 class _SearchBar extends StatelessWidget {
   final String query;
   final WidgetRef ref;
@@ -69,7 +123,7 @@ class _SearchBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       color: Colors.white,
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
+      padding: const EdgeInsets.fromLTRB(16, 28, 16, 14),
       child: TextField(
         decoration: InputDecoration(
           hintText: '이름 또는 전화번호 검색',
@@ -103,10 +157,19 @@ class _SearchBar extends StatelessWidget {
   }
 }
 
+// ── 연락처 카드 ──────────────────────────────────────────
 class _ContactCard extends ConsumerWidget {
   final Contact contact;
   final int index;
-  const _ContactCard({required this.contact, required this.index});
+  final bool isRequesting;
+  final VoidCallback? onCancel;
+
+  const _ContactCard({
+    required this.contact,
+    required this.index,
+    required this.isRequesting,
+    this.onCancel,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -120,8 +183,11 @@ class _ContactCard extends ConsumerWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isRequesting ? const Color(0xFFFFFAF6) : Colors.white,
         borderRadius: BorderRadius.circular(20),
+        border: isRequesting
+            ? Border.all(color: const Color(0xFFf5a060).withValues(alpha: 0.35), width: 1.5)
+            : null,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
@@ -130,88 +196,132 @@ class _ContactCard extends ConsumerWidget {
           ),
         ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        child: Row(
-          children: [
-            // 아바타
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: colors,
-                ),
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                initial,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-            const SizedBox(width: 14),
-            // 이름 + 번호
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    contact.displayName,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF1c1c1e),
-                    ),
+      child: Stack(
+        children: [
+          // 좌측 주황 라인 (요청 중)
+          if (isRequesting)
+            Positioned(
+              left: 0, top: 0, bottom: 0,
+              child: Container(
+                width: 3,
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Color(0xFFf5a060), Color(0xFFe07830)],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
                   ),
-                  if (phone != null) ...[
-                    const SizedBox(height: 3),
-                    Text(
-                      phone,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Color(0xFF8e8e93),
-                      ),
-                    ),
-                  ],
-                ],
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    bottomLeft: Radius.circular(20),
+                  ),
+                ),
               ),
             ),
-            // 위치 요청 버튼
-            if (phone != null)
-              GestureDetector(
-                onTap: () => _showConfirmDialog(context, ref, phone),
-                child: Container(
-                  width: 40,
-                  height: 40,
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Row(
+              children: [
+                // 아바타
+                Container(
+                  width: 48,
+                  height: 48,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    gradient: const LinearGradient(
+                    gradient: LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
-                      colors: [Color(0xFF7bbf9e), Color(0xFF5aaa85)],
+                      colors: colors,
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF5aaa85).withValues(alpha: 0.35),
-                        blurRadius: 10,
-                        offset: const Offset(0, 3),
-                      ),
-                    ],
                   ),
-                  child: const Center(
-                    child: _PinIcon(),
+                  alignment: Alignment.center,
+                  child: Text(
+                    initial,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
-              ),
-          ],
-        ),
+                const SizedBox(width: 14),
+                // 이름 + 번호 / 요청 중 배지
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        contact.displayName,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF1c1c1e),
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      if (isRequesting)
+                        _RequestingBadge()
+                      else if (phone != null)
+                        Text(
+                          phone,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF8e8e93),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                // 우측 버튼
+                if (isRequesting)
+                  GestureDetector(
+                    onTap: onCancel,
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: const Color(0xFFf0f0f0),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.06),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(Icons.close,
+                          size: 16, color: Color(0xFFb0bac8)),
+                    ),
+                  )
+                else if (phone != null)
+                  GestureDetector(
+                    onTap: () => _showConfirmDialog(context, ref, phone),
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [Color(0xFFf5a060), Color(0xFFe07830)],
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFFe07830).withValues(alpha: 0.35),
+                            blurRadius: 10,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(Icons.location_on,
+                          size: 18, color: Colors.white),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -237,7 +347,7 @@ class _ContactCard extends ConsumerWidget {
             child: const Text(
               '확인',
               style: TextStyle(
-                color: Color(0xFF5aaa85),
+                color: Color(0xFFe07830),
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -264,6 +374,7 @@ class _ContactCard extends ConsumerWidget {
       );
 
       ref.read(activeTokenProvider.notifier).state = token;
+      ref.read(requestingPhoneProvider.notifier).state = phoneNumber;
 
       final shareText = LocationRequestService.buildSmsMessage(
         token,
@@ -284,42 +395,64 @@ class _ContactCard extends ConsumerWidget {
   }
 }
 
-class _PinIcon extends StatelessWidget {
-  const _PinIcon();
+// ── 요청 중 배지 (깜빡이는 점) ──────────────────────────
+class _RequestingBadge extends StatefulWidget {
+  @override
+  State<_RequestingBadge> createState() => _RequestingBadgeState();
+}
+
+class _RequestingBadgeState extends State<_RequestingBadge>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return CustomPaint(
-      size: const Size(16, 20),
-      painter: _PinPainter(),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: const Color(0xFFe07830).withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          FadeTransition(
+            opacity: _ctrl,
+            child: Container(
+              width: 5,
+              height: 5,
+              margin: const EdgeInsets.only(right: 5),
+              decoration: const BoxDecoration(
+                color: Color(0xFFe07830),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          const Text(
+            '위치 요청 중',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFFd07030),
+            ),
+          ),
+        ],
+      ),
     );
   }
-}
-
-class _PinPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = Colors.white;
-    final path = Path();
-    final cx = size.width / 2;
-
-    path.moveTo(cx, 0);
-    path.cubicTo(0, 0, 0, size.height * 0.55, cx, size.height * 0.55);
-    path.cubicTo(
-        size.width, size.height * 0.55, size.width, 0, cx, 0);
-    path.lineTo(cx, size.height);
-    path.close();
-
-    canvas.drawPath(path, paint);
-
-    final holePaint = Paint()..color = const Color(0xFF5aaa85);
-    canvas.drawCircle(
-      Offset(cx, size.height * 0.28),
-      size.width * 0.22,
-      holePaint,
-    );
-  }
-
-  @override
-  bool shouldRepaint(_) => false;
 }
