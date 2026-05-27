@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>지도 미리보기</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, sans-serif; display: flex; flex-direction: column; height: 100vh; }
+    #appbar {
+      background: #007AFF; color: white;
+      padding: 16px 20px; font-size: 18px; font-weight: 600;
+    }
+    #map { flex: 1; }
+    #panel {
+      background: white;
+      box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+      padding: 20px;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+    }
+    .stat { text-align: center; }
+    .stat .icon { font-size: 24px; margin-bottom: 4px; }
+    .stat .value { font-size: 20px; font-weight: 700; color: #007AFF; }
+    .stat .label { font-size: 12px; color: #999; margin-top: 2px; }
+  </style>
+</head>
+<body>
+  <div id="appbar">위치 확인</div>
+  <div id="map"></div>
+  <div id="panel">
+    <div class="stat">
+      <div class="icon">📏</div>
+      <div class="value" id="dist">-</div>
+      <div class="label">직선 거리</div>
+    </div>
+    <div class="stat">
+      <div class="icon">🚶</div>
+      <div class="value" id="walk">-</div>
+      <div class="label">도보</div>
+    </div>
+    <div class="stat">
+      <div class="icon">🚗</div>
+      <div class="value" id="drive">-</div>
+      <div class="label">차량</div>
+    </div>
+  </div>
+
+  <script>
+    // 샘플 위치: 강남역 근처
+    const myPos = [37.4979, 127.0276];     // 나 (파란 핀)
+    const theirPos = [37.5045, 127.0244];  // 상대방 (빨간 핀)
+
+    const map = L.map('map').setView([
+      (myPos[0] + theirPos[0]) / 2,
+      (myPos[1] + theirPos[1]) / 2
+    ], 14);
+
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap'
+    }).addTo(map);
+
+    // 내 위치 (파란 마커)
+    const blueIcon = L.divIcon({
+      html: '<div style="font-size:32px;line-height:1;">🔵</div>',
+      iconSize: [32, 32], iconAnchor: [16, 16], className: ''
+    });
+    L.marker(myPos, { icon: blueIcon }).addTo(map).bindPopup('나').openPopup();
+
+    // 상대방 위치 (빨간 마커)
+    const redIcon = L.divIcon({
+      html: '<div style="font-size:32px;line-height:1;">📍</div>',
+      iconSize: [32, 32], iconAnchor: [16, 32], className: ''
+    });
+    L.marker(theirPos, { icon: redIcon }).addTo(map).bindPopup('상대방');
+
+    // 점선 연결
+    L.polyline([myPos, theirPos], {
+      color: '#007AFF', weight: 2, dashArray: '6, 6'
+    }).addTo(map);
+
+    // 거리 계산 (Haversine)
+    function haversine(lat1, lng1, lat2, lng2) {
+      const R = 6371000;
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLng = (lng2 - lng1) * Math.PI / 180;
+      const a = Math.sin(dLat/2)**2 +
+                Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLng/2)**2;
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    }
+
+    const dist = haversine(...myPos, ...theirPos);
+    const distStr = dist < 1000 ? `${Math.round(dist)}m` : `${(dist/1000).toFixed(1)}km`;
+    const walkMin = Math.ceil(dist / 67);
+    const driveMin = Math.ceil(dist / 500);
+
+    document.getElementById('dist').textContent = distStr;
+    document.getElementById('walk').textContent = walkMin + '분';
+    document.getElementById('drive').textContent = driveMin + '분';
+  </script>
+</body>
+</html>
