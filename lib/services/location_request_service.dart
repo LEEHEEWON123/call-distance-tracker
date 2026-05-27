@@ -37,6 +37,9 @@ class LocationRequestService {
 
   /// SMS 문자 본문 생성
   static String buildSmsMessage(String token, String baseUrl) {
-    return '📍 위치 공유 요청이 도착했습니다.\n아래 링크를 눌러 위치를 공유해 주세요:\n$baseUrl/$token\n(10분 후 만료)';
+    final expiry = DateTime.now().add(const Duration(minutes: 10));
+    final h = expiry.hour.toString().padLeft(2, '0');
+    final m = expiry.minute.toString().padLeft(2, '0');
+    return '📍 위치 공유 요청이 도착했습니다.\n아래 링크를 눌러 위치를 공유해 주세요:\n$baseUrl/$token\n($h:$m 까지)';
   }
 }
