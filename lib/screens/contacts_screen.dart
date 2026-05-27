@@ -106,10 +106,45 @@ class _ContactTile extends ConsumerWidget {
       trailing: phone != null
           ? IconButton(
               icon: const Icon(Icons.location_on, color: Color(0xFF007AFF)),
-              onPressed: () => _requestLocation(context, ref, phone),
+              onPressed: () => _showConfirmDialog(context, ref, phone),
             )
           : null,
     );
+  }
+
+  Future<void> _showConfirmDialog(
+      BuildContext context, WidgetRef ref, String phoneNumber) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('위치 요청'),
+        content: Text(
+          '${contact.displayName}에게\n위치 공유 요청을 보낼까요?',
+          style: const TextStyle(fontSize: 15),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('취소', style: TextStyle(color: Colors.grey)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text(
+              '확인',
+              style: TextStyle(
+                color: Color(0xFF007AFF),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && context.mounted) {
+      await _requestLocation(context, ref, phoneNumber);
+    }
   }
 
   Future<void> _requestLocation(
