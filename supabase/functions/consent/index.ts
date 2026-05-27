@@ -22,7 +22,7 @@ Deno.serve(async (req: Request) => {
 
   const { data, error } = await supabase
     .from('location_requests')
-    .select('status, expires_at')
+    .select('status, expires_at, requester_lat, requester_lng')
     .eq('token', token)
     .single()
 
@@ -38,7 +38,11 @@ Deno.serve(async (req: Request) => {
     return redirect({ error: 'completed' })
   }
 
-  return redirect({ token })
+  return redirect({
+    token,
+    rlat: String(data.requester_lat),
+    rlng: String(data.requester_lng),
+  })
 })
 
 function redirect(params: Record<string, string>): Response {

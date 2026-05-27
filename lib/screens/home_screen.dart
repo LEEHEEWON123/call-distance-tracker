@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
-import '../core/constants.dart';
 import '../core/device_id.dart';
 import '../providers/phone_state_provider.dart';
 import '../providers/location_request_provider.dart';
@@ -94,10 +93,7 @@ class HomeScreen extends ConsumerWidget {
 
       ref.read(activeTokenProvider.notifier).state = token;
 
-      final shareText = LocationRequestService.buildSmsMessage(
-        token,
-        AppConstants.consentBaseUrl,
-      );
+      final shareText = LocationRequestService.buildShareMessage(token);
       await Share.share(shareText);
 
       if (context.mounted) {

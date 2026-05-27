@@ -1,4 +1,5 @@
 import 'package:uuid/uuid.dart';
+import '../core/constants.dart';
 import '../core/supabase_client.dart';
 import '../models/location_request.dart';
 
@@ -34,11 +35,23 @@ class LocationRequestService {
         .where((req) => req.status == LocationRequestStatus.completed);
   }
 
-  /// SMS 문자 본문 생성
-  static String buildSmsMessage(String token, String baseUrl) {
+  /// 딥링크 공유 메시지 생성 (nearmates://consent/TOKEN)
+  static String buildShareMessage(String token) {
+    final link =
+        '${AppConstants.deepLinkScheme}://${AppConstants.deepLinkHost}/$token';
     final expiry = DateTime.now().add(const Duration(minutes: 10));
     final h = expiry.hour.toString().padLeft(2, '0');
     final m = expiry.minute.toString().padLeft(2, '0');
-    return '📍 위치 공유 요청이 도착했습니다.\n아래 링크를 눌러 위치를 공유해 주세요:\n$baseUrl/$token\n($h:$m 까지)';
+    return '📍 위치 공유 요청이 도착했습니다.\n아래 링크를 눌러 위치를 공유해 주세요 (NearMates 앱 필요):\n$link\n($h:$m 까지)';
+  }
+
+  /// 토큰으로 요청 정보 조회 (동의 화면용)
+  static Future<Map<String, dynamic>?> getRequestByToken(String token) async {
+    final res = await supabase
+        .from('location_requests')
+        .select('status, expires_at, requester_lat, requester_lng')
+        .eq('token', token)
+        .maybeSingle();
+    return res;
   }
 }
