@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'screens/splash_screen.dart';
-import 'screens/home_screen.dart';
+import 'screens/main_screen.dart';
 import 'screens/waiting_screen.dart';
 import 'screens/map_screen.dart';
 import 'models/location_request.dart';
@@ -23,7 +22,7 @@ class App extends StatelessWidget {
           case '/':
             return MaterialPageRoute(builder: (_) => const SplashScreen());
           case '/home':
-            return MaterialPageRoute(builder: (_) => const HomeScreen());
+            return MaterialPageRoute(builder: (_) => const MainScreen());
           case '/waiting':
             final token = settings.arguments as String;
             return MaterialPageRoute(
@@ -35,7 +34,7 @@ class App extends StatelessWidget {
               builder: (_) => MapScreen(locationRequest: req),
             );
           default:
-            return MaterialPageRoute(builder: (_) => const HomeScreen());
+            return MaterialPageRoute(builder: (_) => const MainScreen());
         }
       },
     );

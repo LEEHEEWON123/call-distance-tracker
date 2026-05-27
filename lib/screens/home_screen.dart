@@ -16,11 +16,6 @@ class HomeScreen extends ConsumerWidget {
     final isOnCall = ref.watch(isOnCallProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Call Distance Tracker'),
-        backgroundColor: const Color(0xFF007AFF),
-        foregroundColor: Colors.white,
-      ),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(32),
