@@ -17,16 +17,10 @@ class _MainScreenState extends State<MainScreen> {
     ContactsScreen(),
   ];
 
-  static const _titles = ['통화 중', '연락처'];
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_titles[_currentIndex]),
-        backgroundColor: const Color(0xFF007AFF),
-        foregroundColor: Colors.white,
-      ),
+      backgroundColor: const Color(0xFFf4f7fb),
       body: IndexedStack(
         index: _currentIndex,
         children: _screens,
