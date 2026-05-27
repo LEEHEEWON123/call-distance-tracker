@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>통화중 화면 미리보기</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #dde8f2;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+
+  .phone-frame {
+    width: 390px;
+    height: 844px;
+    background: #f4f7fb;
+    border-radius: 48px;
+    box-shadow: 0 32px 80px rgba(0,0,0,0.16), inset 0 0 0 1.5px rgba(255,255,255,0.7);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 32px;
+    gap: 0;
+  }
+
+  /* 아이콘 래퍼 */
+  .icon-wrap {
+    position: relative;
+    width: 180px;
+    height: 180px;
+    margin-bottom: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* 아이콘 이미지 */
+  .icon-wrap img {
+    width: 140px;
+    height: 140px;
+    border-radius: 32px;
+    position: relative;
+    z-index: 2;
+    transition: filter 0.4s;
+  }
+  .icon-wrap img.idle {
+    filter: grayscale(60%) brightness(0.95);
+  }
+  .icon-wrap img.oncall {
+    filter: none;
+  }
+
+  /* 글로우 링 */
+  .glow-ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    z-index: 1;
+    transition: background 0.4s, box-shadow 0.4s;
+  }
+  .glow-ring.idle {
+    background: rgba(180,195,215,0.18);
+    box-shadow: 0 0 0 0 transparent;
+  }
+  .glow-ring.oncall {
+    background: rgba(240,155,90,0.18);
+    box-shadow:
+      0 0 40px 10px rgba(240,140,70,0.22),
+      0 0 80px 20px rgba(240,140,70,0.10);
+  }
+
+  /* 펄스 링 (통화중만) */
+  @keyframes pulse {
+    0%   { transform: scale(1);   opacity: 0.55; }
+    80%  { transform: scale(1.7); opacity: 0;    }
+    100% { transform: scale(1.7); opacity: 0;    }
+  }
+  .pulse {
+    position: absolute;
+    inset: 16px;
+    border-radius: 50%;
+    background: rgba(240,140,70,0.3);
+    animation: pulse 2s infinite;
+    z-index: 0;
+    display: none;
+  }
+  .pulse.p2 { animation-delay: 0.7s; }
+  .pulse.active { display: block; }
+
+  /* 상태 배지 */
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 14px;
+    transition: all 0.3s;
+  }
+  .status-badge.idle {
+    background: #e8edf3;
+    color: #96a3b4;
+  }
+  .status-badge.oncall {
+    background: rgba(240,140,70,0.12);
+    color: #d07030;
+  }
+  .badge-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+  .badge-dot.oncall { animation: blink 1.2s infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  /* 타이틀 */
+  .status-title {
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -0.8px;
+    margin-bottom: 10px;
+    transition: color 0.3s;
+  }
+  .status-title.idle   { color: #b0bac8; }
+  .status-title.oncall { color: #1c2333; }
+
+  .status-desc {
+    font-size: 14px;
+    color: #96a3b4;
+    text-align: center;
+    line-height: 1.65;
+    margin-bottom: 36px;
+  }
+
+  /* 버튼 */
+  .request-btn {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 15px 36px;
+    border-radius: 28px;
+    border: none;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: -0.2px;
+    transition: all 0.2s;
+  }
+  .request-btn.active {
+    background: linear-gradient(135deg, #f5a060, #e07830);
+    color: white;
+    box-shadow: 0 8px 24px rgba(224,120,48,0.4);
+  }
+  .request-btn.inactive {
+    background: #e8edf3;
+    color: #b0bac8;
+    cursor: default;
+  }
+
+  /* 웨이브 도트 */
+  @keyframes waveDot {
+    0%,100% { transform: translateY(0); }
+    50%      { transform: translateY(-5px); }
+  }
+  .wave-dot {
+    display: inline-block;
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: #e07830;
+    margin: 0 3px;
+    animation: waveDot 0.9s ease-in-out infinite;
+  }
+  .wave-dot:nth-child(2) { animation-delay: 0.15s; }
+  .wave-dot:nth-child(3) { animation-delay: 0.30s; }
+
+  /* 토글 */
+  .toggle-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .toggle-btn {
+    padding: 8px 22px;
+    border-radius: 20px;
+    border: 1.5px solid #5aaa85;
+    background: white;
+    color: #5aaa85;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .toggle-btn.selected { background: #5aaa85; color: white; }
+
+  /* 하단 탭 */
+  .bottom-nav {
+    background: white;
+    border-top: 1px solid #edf0f4;
+    display: flex;
+    box-shadow: 0 -2px 12px rgba(0,0,0,0.04);
+  }
+  .nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px 0 16px;
+    gap: 4px;
+    cursor: pointer;
+  }
+  .nav-label     { font-size: 11px; font-weight: 500; color: #5aaa85; }
+  .nav-label.off { color: #b0bac8; }
+</style>
+</head>
+<body>
+
+<div style="display:flex;flex-direction:column;align-items:center;gap:20px;">
+  <div class="toggle-row">
+    <button class="toggle-btn selected" onclick="setMode('idle')">대기 중</button>
+    <button class="toggle-btn"          onclick="setMode('oncall')">통화 중</button>
+  </div>
+
+  <div class="phone-frame">
+    <div class="content">
+
+      <!-- 상태 배지 -->
+      <div class="status-badge idle" id="badge">
+        <div class="badge-dot" id="badge-dot"></div>
+        <span id="badge-text">대기 중</span>
+      </div>
+
+      <!-- 타이틀 -->
+      <div class="status-title idle" id="title">위치 요청 대기</div>
+
+      <!-- 설명 -->
+      <div class="status-desc" id="desc">
+        통화 중일 때 위치 요청<br>버튼이 활성화됩니다.
+      </div>
+
+      <!-- 웨이브 -->
+      <div id="wave" style="display:none; margin-bottom:20px;">
+        <div class="wave-dot"></div>
+        <div class="wave-dot"></div>
+        <div class="wave-dot"></div>
+      </div>
+
+      <!-- 버튼 -->
+      <button class="request-btn inactive" id="btn">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+        </svg>
+        위치 요청 보내기
+      </button>
+
+    </div>
+
+    <!-- 하단 탭 -->
+    <div class="bottom-nav">
+      <div class="nav-item">
+        <svg width="36" height="30" viewBox="0 0 38 32">
+          <ellipse cx="14.4" cy="23" rx="10.5" ry="8.3" fill="#93b5e1"/>
+          <circle cx="10.6" cy="20.8" r="2" fill="white"/>
+          <circle cx="17.5" cy="20.8" r="2" fill="white"/>
+          <circle cx="8.4" cy="23.4" r="1.4" fill="#f5a8b0"/>
+          <circle cx="19.8" cy="23.4" r="1.4" fill="#f5a8b0"/>
+          <path d="M10.6 25.6 Q14 27.8 17.5 25.6" stroke="white" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+          <g transform="translate(27.4,17.6) rotate(35)">
+            <rect x="-6.1" y="-11.1" width="12.2" height="22.1" rx="4" fill="#5aaa85"/>
+            <rect x="-3.8" y="-8.9" width="7.6" height="12.9" rx="2" fill="white" opacity="0.55"/>
+          </g>
+        </svg>
+        <span class="nav-label">통화 중</span>
+      </div>
+      <div class="nav-item">
+        <svg width="36" height="30" viewBox="0 0 38 32">
+          <ellipse cx="11.4" cy="22.4" rx="9" ry="8.5" fill="#c0cad8"/>
+          <circle cx="8.1" cy="20.3" r="1.5" fill="white"/>
+          <circle cx="13.9" cy="20.3" r="1.5" fill="white"/>
+          <ellipse cx="26.6" cy="22.4" rx="9" ry="8.5" fill="#c0cad8"/>
+          <circle cx="23.3" cy="20.3" r="1.5" fill="white"/>
+          <circle cx="29.1" cy="20.3" r="1.5" fill="white"/>
+        </svg>
+        <span class="nav-label off">연락처</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function setMode(m) {
+    document.querySelectorAll('.toggle-btn').forEach((b,i)=>{
+      b.classList.toggle('selected',(i===0&&m==='idle')||(i===1&&m==='oncall'));
+    });
+    const badge  = document.getElementById('badge');
+    const dot    = document.getElementById('badge-dot');
+    const btext  = document.getElementById('badge-text');
+    const title  = document.getElementById('title');
+    const desc   = document.getElementById('desc');
+    const btn    = document.getElementById('btn');
+    const wave   = document.getElementById('wave');
+
+    if (m === 'oncall') {
+      badge.className = 'status-badge oncall';
+      dot.className   = 'badge-dot oncall';
+      btext.textContent = '통화 중';
+      title.textContent = '통화 중';
+      title.className = 'status-title oncall';
+      desc.innerHTML  = '상대방에게 위치 공유를<br>요청할 수 있어요.';
+      btn.className   = 'request-btn active';
+      wave.style.display = 'flex';
+    } else {
+      badge.className = 'status-badge idle';
+      dot.className   = 'badge-dot';
+      btext.textContent = '대기 중';
+      title.textContent = '위치 요청 대기';
+      title.className = 'status-title idle';
+      desc.innerHTML  = '통화 중일 때 위치 요청<br>버튼이 활성화됩니다.';
+      btn.className   = 'request-btn inactive';
+      wave.style.display = 'none';
+    }
+  }
+</script>
+</body>
+</html>
