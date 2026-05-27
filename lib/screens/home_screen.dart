@@ -101,11 +101,7 @@ class HomeScreen extends ConsumerWidget {
         token,
         AppConstants.consentBaseUrl,
       );
-      final uri = Uri(
-        scheme: 'sms',
-        path: '',
-        queryParameters: {'body': smsBody},
-      );
+      final uri = Uri.parse('sms:?body=${Uri.encodeComponent(smsBody)}');
 
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri);
