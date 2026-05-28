@@ -1,13 +1,13 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
 import 'package:http/http.dart' as http;
-import 'package:latlong2/latlong.dart';
 import '../core/constants.dart';
+import '../models/location_request.dart';
 import '../services/location_request_service.dart';
 import '../services/location_service.dart';
+import 'map_screen.dart';
 
-enum _PageState { loading, ready, submitting, done, error }
+enum _PageState { loading, ready, submitting, error }
 
 class ConsentScreen extends StatefulWidget {
   final String token;
@@ -20,11 +20,7 @@ class ConsentScreen extends StatefulWidget {
 class _ConsentScreenState extends State<ConsentScreen> {
   _PageState _state = _PageState.loading;
   String _errorMsg = '';
-  double? _requesterLat;
-  double? _requesterLng;
-  double? _myLat;
-  double? _myLng;
-  double _distanceMeters = 0;
+  Map<String, dynamic>? _requestData;
 
   @override
   void initState() {
@@ -63,8 +59,7 @@ class _ConsentScreenState extends State<ConsentScreen> {
         return;
       }
 
-      _requesterLat = (data['requester_lat'] as num).toDouble();
-      _requesterLng = (data['requester_lng'] as num).toDouble();
+      _requestData = data;
       setState(() => _state = _PageState.ready);
     } catch (e) {
       if (!mounted) return;
@@ -79,23 +74,37 @@ class _ConsentScreenState extends State<ConsentScreen> {
     setState(() => _state = _PageState.submitting);
     try {
       final pos = await LocationService.getCurrentPosition();
-      _myLat = pos.latitude;
-      _myLng = pos.longitude;
 
       final res = await http.post(
-        Uri.parse(
-            '${AppConstants.submitLocationUrl}/${widget.token}'),
+        Uri.parse('${AppConstants.submitLocationUrl}/${widget.token}'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'lat': _myLat, 'lng': _myLng}),
+        body: jsonEncode({'lat': pos.latitude, 'lng': pos.longitude}),
       );
 
       if (!mounted) return;
 
       if (res.statusCode == 200) {
-        _distanceMeters = LocationService.haversineDistance(
-          _requesterLat!, _requesterLng!, _myLat!, _myLng!,
+        // MapScreen에 전달할 LocationRequest 구성
+        final data = _requestData!;
+        final locationRequest = LocationRequest(
+          id: data['id'] as String,
+          token: data['token'] as String,
+          requesterId: data['requester_id'] as String,
+          requesterLat: (data['requester_lat'] as num).toDouble(),
+          requesterLng: (data['requester_lng'] as num).toDouble(),
+          responderLat: pos.latitude,
+          responderLng: pos.longitude,
+          responderPhone: data['responder_phone'] as String?,
+          status: LocationRequestStatus.completed,
+          createdAt: DateTime.parse(data['created_at'] as String),
+          expiresAt: DateTime.parse(data['expires_at'] as String),
         );
-        setState(() => _state = _PageState.done);
+
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (_) => MapScreen(locationRequest: locationRequest),
+          ),
+        );
       } else {
         setState(() {
           _state = _PageState.error;
@@ -119,7 +128,6 @@ class _ConsentScreenState extends State<ConsentScreen> {
         child: switch (_state) {
           _PageState.loading => _buildLoading(),
           _PageState.ready || _PageState.submitting => _buildConsent(),
-          _PageState.done => _buildMap(),
           _PageState.error => _buildError(),
         },
       ),
@@ -223,193 +231,6 @@ class _ConsentScreenState extends State<ConsentScreen> {
     );
   }
 
-  // ── 지도 화면 ───────────────────────────────────────────────
-  Widget _buildMap() {
-    final myPos = LatLng(_myLat!, _myLng!);
-    final theirPos = LatLng(_requesterLat!, _requesterLng!);
-    final center = LatLng(
-      (_myLat! + _requesterLat!) / 2,
-      (_myLng! + _requesterLng!) / 2,
-    );
-    final distStr = LocationService.formatDistance(_distanceMeters);
-
-    return Column(
-      children: [
-        // 상단 헤더
-        Container(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
-          color: Colors.white,
-          child: Row(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.arrow_back_ios,
-                    size: 20, color: Color(0xFF1c2333)),
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-              const Expanded(
-                child: Text(
-                  '두 분의 위치',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF1c2333),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 48),
-            ],
-          ),
-        ),
-
-        // 지도
-        Expanded(
-          child: FlutterMap(
-            options: MapOptions(
-              initialCenter: center,
-              initialZoom: 14,
-            ),
-            children: [
-              TileLayer(
-                urlTemplate:
-                    'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                userAgentPackageName: 'com.calltracker.app',
-              ),
-              PolylineLayer(
-                polylines: [
-                  Polyline(
-                    points: [myPos, theirPos],
-                    color: const Color(0x99e07830),
-                    strokeWidth: 2,
-                    isDotted: true,
-                  ),
-                ],
-              ),
-              MarkerLayer(
-                markers: [
-                  // 내 위치 (초록)
-                  Marker(
-                    point: myPos,
-                    width: 20,
-                    height: 20,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF5aaa85),
-                        shape: BoxShape.circle,
-                        border:
-                            Border.all(color: Colors.white, width: 3),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Color(0x665aaa85),
-                            blurRadius: 8,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  // 요청자 위치 (주황)
-                  Marker(
-                    point: theirPos,
-                    width: 20,
-                    height: 20,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFe07830),
-                        shape: BoxShape.circle,
-                        border:
-                            Border.all(color: Colors.white, width: 3),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Color(0x66e07830),
-                            blurRadius: 8,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-
-        // 하단 거리 카드
-        Container(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius:
-                BorderRadius.vertical(top: Radius.circular(24)),
-            boxShadow: [
-              BoxShadow(
-                color: Color(0x14000000),
-                blurRadius: 20,
-                offset: Offset(0, -4),
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 36,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 18),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFD1D1D6),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _LegendDot(
-                      color: Color(0xFF5aaa85), label: '나'),
-                  _LegendDot(
-                      color: Color(0xFFe07830), label: '요청자'),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 18, vertical: 14),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFf4f7fb),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Row(
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          distStr,
-                          style: const TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.w800,
-                            color: Color(0xFFe07830),
-                          ),
-                        ),
-                        const Text(
-                          '직선 거리',
-                          style: TextStyle(
-                              fontSize: 13, color: Color(0xFF96a3b4)),
-                        ),
-                      ],
-                    ),
-                    const Spacer(),
-                    const Icon(Icons.straighten,
-                        size: 28, color: Color(0xFF96a3b4)),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
   // ── 에러 화면 ───────────────────────────────────────────────
   Widget _buildError() {
     return Center(
@@ -447,33 +268,3 @@ class _ConsentScreenState extends State<ConsentScreen> {
   }
 }
 
-class _LegendDot extends StatelessWidget {
-  final Color color;
-  final String label;
-  const _LegendDot({required this.color, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 12,
-          height: 12,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-          ),
-        ),
-        const SizedBox(width: 6),
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 13,
-            color: Color(0xFF96a3b4),
-          ),
-        ),
-      ],
-    );
-  }
-}
