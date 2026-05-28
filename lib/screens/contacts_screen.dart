@@ -551,6 +551,7 @@ class _ContactCard extends ConsumerWidget {
       await FcmService.sendLocationRequestPush(
         responderPhone: phoneNumber.replaceAll(RegExp(r'[\s\-]'), ''),
         requesterName: contact.displayName,
+        requestToken: token,
       );
 
       final shareText = LocationRequestService.buildShareMessage(token);

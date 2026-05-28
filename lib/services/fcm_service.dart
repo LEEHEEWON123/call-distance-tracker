@@ -9,8 +9,6 @@ import '../core/supabase_client.dart';
 /// FCM 백그라운드 핸들러 — top-level 함수여야 함
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  // 백그라운드에서는 Firebase가 이미 초기화된 상태
-  // 별도 처리가 필요하면 여기에 추가
   debugPrint('[FCM Background] ${message.notification?.title}');
 }
 
@@ -19,9 +17,12 @@ class FcmService {
 
   static final _messaging = FirebaseMessaging.instance;
 
+  /// main.dart에서 주입
+  static GlobalKey<NavigatorState>? navigatorKey;
+
   /// 앱 시작 시 호출: 권한 요청 → 토큰 저장 → 핸들러 등록
   static Future<void> init(String phone) async {
-    // 1. 알림 권한 요청 (Android 13+ / iOS)
+    // 1. 알림 권한 요청
     final settings = await _messaging.requestPermission(
       alert: true,
       badge: true,
@@ -43,23 +44,32 @@ class FcmService {
       }
     });
 
-    // 4. 포그라운드 메시지 수신 (알림 표시는 OS가 처리하지 않으므로 직접 처리)
+    // 4. 포그라운드 메시지 — Realtime으로 다이얼로그가 이미 처리됨
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       debugPrint('[FCM Foreground] ${message.notification?.title}');
-      // 포그라운드에서는 이미 앱이 열려있어 Realtime으로 다이얼로그가 표시됨
-      // 별도 snackbar/overlay가 필요하면 여기에 추가
     });
 
-    // 5. 알림 탭으로 앱이 열릴 때 (백그라운드 → 포그라운드)
+    // 5. 백그라운드 상태에서 알림 탭 → 앱 포그라운드로 전환
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      debugPrint('[FCM Opened] ${message.data}');
-      // 필요 시 특정 화면으로 이동 로직 추가
+      _navigateToConsent(message);
     });
 
-    // 6. 앱이 완전히 종료된 상태에서 알림 탭으로 시작
+    // 6. 앱 완전 종료 상태에서 알림 탭 → 앱 시작
     final initial = await _messaging.getInitialMessage();
     if (initial != null) {
-      debugPrint('[FCM Initial] ${initial.data}');
+      // 앱이 완전히 뜬 후 이동해야 하므로 짧은 딜레이
+      Future.delayed(const Duration(milliseconds: 500), () {
+        _navigateToConsent(initial);
+      });
+    }
+  }
+
+  /// 알림 데이터에서 token 추출 후 consent 화면으로 이동
+  static void _navigateToConsent(RemoteMessage message) {
+    final requestToken = message.data['request_token'] as String?;
+    if (requestToken != null && requestToken.isNotEmpty) {
+      debugPrint('[FCM] Navigate to consent: $requestToken');
+      navigatorKey?.currentState?.pushNamed('/consent', arguments: requestToken);
     }
   }
 
@@ -81,10 +91,11 @@ class FcmService {
     }
   }
 
-  /// 위치 요청 시 상대방에게 푸시 알림 전송
+  /// 위치 요청 시 상대방에게 푸시 알림 전송 (request_token 포함)
   static Future<void> sendLocationRequestPush({
     required String responderPhone,
     required String requesterName,
+    required String requestToken,
   }) async {
     try {
       final res = await http.post(
@@ -97,7 +108,10 @@ class FcmService {
           'responder_phone': responderPhone,
           'title': '위치 요청',
           'body': '$requesterName님이 위치를 요청했습니다.',
-          'data': {'type': 'location_request'},
+          'data': {
+            'type': 'location_request',
+            'request_token': requestToken,
+          },
         }),
       );
       debugPrint('[FCM] Push sent: ${res.statusCode} ${res.body}');

@@ -22,6 +22,7 @@ Future<void> main() async {
     url: AppConstants.supabaseUrl,
     anonKey: AppConstants.supabaseAnonKey,
   );
+  FcmService.navigatorKey = _navigatorKey;
   runApp(ProviderScope(child: App(navigatorKey: _navigatorKey)));
   _initDeepLinks();
 }
