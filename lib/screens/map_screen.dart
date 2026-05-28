@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
+import 'package:latlong2/latlong.dart' hide Path;
 import '../models/location_request.dart';
 import '../services/location_service.dart';
 
@@ -117,11 +117,12 @@ class _MapScreenState extends State<MapScreen> {
       mapController: _mapController,
       options: MapOptions(
         initialCenter: _center,
-        initialZoom: 15,
+        initialZoom: 17,
       ),
       children: [
         TileLayer(
-          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+          urlTemplate: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
+          subdomains: const ['a', 'b', 'c', 'd'],
           userAgentPackageName: 'com.calltracker.app',
         ),
         CircleLayer(
@@ -168,12 +169,12 @@ class _MapScreenState extends State<MapScreen> {
                 ),
               ),
             ),
-            // 상대방 — 빨간 물방울 핀
+            // 상대방 — 네이버 스타일 빨간 말풍선 + 핀
             Marker(
               point: _theirPos,
-              width: 36,
-              height: 44,
-              alignment: const Alignment(0, -1),
+              width: 80,
+              height: 52,
+              alignment: const Alignment(0, 1),
               child: _TheirMarker(),
             ),
           ],
@@ -187,7 +188,7 @@ class _MapScreenState extends State<MapScreen> {
       right: 16,
       bottom: 220,
       child: GestureDetector(
-        onTap: () => _mapController.move(_center, 15),
+        onTap: () => _mapController.move(_center, 17),
         child: Container(
           width: 44,
           height: 44,
@@ -212,58 +213,75 @@ class _MapScreenState extends State<MapScreen> {
 class _TheirMarker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      alignment: Alignment.topCenter,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Transform.rotate(
-          angle: -0.785,
-          child: Container(
-            width: 32,
-            height: 32,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFFFF3B30), Color(0xFFFF6B6B)],
+        // 말풍선
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFF3B30),
+            borderRadius: BorderRadius.circular(8),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x59FF3B30),
+                blurRadius: 8,
+                offset: Offset(0, 2),
               ),
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(16),
-                topRight: Radius.circular(16),
-                bottomRight: Radius.circular(16),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Color(0x66FF3B30),
-                  blurRadius: 8,
-                  offset: Offset(0, 4),
-                ),
-              ],
+            ],
+          ),
+          child: const Text(
+            '상대방',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              height: 1,
             ),
           ),
         ),
-        Positioned(
-          top: 6,
-          child: Container(
-            width: 20,
-            height: 20,
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-            ),
-            alignment: Alignment.center,
-            child: const Text(
-              '상',
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFFFF3B30),
+        // 삼각형 꼬리
+        CustomPaint(
+          size: const Size(10, 5),
+          painter: _CalloutArrowPainter(),
+        ),
+        const SizedBox(height: 1),
+        // 핀 원형
+        Container(
+          width: 14,
+          height: 14,
+          decoration: BoxDecoration(
+            color: const Color(0xFFFF3B30),
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white, width: 2),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x59FF3B30),
+                blurRadius: 6,
+                offset: Offset(0, 2),
               ),
-            ),
+            ],
           ),
         ),
       ],
     );
   }
+}
+
+class _CalloutArrowPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = const Color(0xFFFF3B30);
+    final path = Path()
+      ..moveTo(0, 0)
+      ..lineTo(size.width, 0)
+      ..lineTo(size.width / 2, size.height)
+      ..close();
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(_CalloutArrowPainter oldDelegate) => false;
 }
 
 class _BottomSheet extends StatelessWidget {

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
-import '../core/constants.dart';
 import '../core/device_id.dart';
 import '../providers/contacts_provider.dart';
 import '../providers/location_request_provider.dart';
@@ -18,11 +17,26 @@ const _avatarGradients = [
   [Color(0xFFffd97d), Color(0xFFf0be45)],
 ];
 
-class ContactsScreen extends ConsumerWidget {
+class ContactsScreen extends ConsumerStatefulWidget {
   const ContactsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ContactsScreen> createState() => _ContactsScreenState();
+}
+
+class _ContactsScreenState extends ConsumerState<ContactsScreen> {
+  bool _isRefreshing = false;
+
+  Future<void> _refresh() async {
+    setState(() => _isRefreshing = true);
+    ref.invalidate(contactsProvider);
+    // contactsProvider가 완료될 때까지 대기
+    await ref.read(contactsProvider.future).catchError((_) => <Contact>[]);
+    if (mounted) setState(() => _isRefreshing = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final contactsAsync = ref.watch(filteredContactsProvider);
     final query = ref.watch(contactSearchQueryProvider);
     final requestingPhone = ref.watch(requestingPhoneProvider);
@@ -31,7 +45,7 @@ class ContactsScreen extends ConsumerWidget {
       color: const Color(0xFFf2f2f2),
       child: Column(
         children: [
-          _SearchBar(query: query, ref: ref),
+          _SearchBar(query: query, ref: ref, isRefreshing: _isRefreshing, onRefresh: _refresh),
           Expanded(
             child: contactsAsync.when(
               data: (contacts) {
@@ -116,42 +130,86 @@ class _SectionLabel extends StatelessWidget {
 class _SearchBar extends StatelessWidget {
   final String query;
   final WidgetRef ref;
+  final bool isRefreshing;
+  final VoidCallback onRefresh;
 
-  const _SearchBar({required this.query, required this.ref});
+  const _SearchBar({
+    required this.query,
+    required this.ref,
+    required this.isRefreshing,
+    required this.onRefresh,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       color: const Color(0xFFf2f2f2),
       padding: const EdgeInsets.fromLTRB(16, 28, 16, 14),
-      child: TextField(
-        decoration: InputDecoration(
-          hintText: '이름 또는 전화번호 검색',
-          hintStyle: const TextStyle(color: Color(0xFFaaaaaa)),
-          prefixIcon: const Padding(
-            padding: EdgeInsets.only(left: 16, right: 8),
-            child: Icon(Icons.search, color: Color(0xFFaaaaaa), size: 20),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              decoration: InputDecoration(
+                hintText: '이름 또는 전화번호 검색',
+                hintStyle: const TextStyle(color: Color(0xFFaaaaaa)),
+                prefixIcon: const Padding(
+                  padding: EdgeInsets.only(left: 16, right: 8),
+                  child: Icon(Icons.search, color: Color(0xFFaaaaaa), size: 20),
+                ),
+                prefixIconConstraints: const BoxConstraints(minWidth: 52),
+                filled: true,
+                fillColor: const Color(0xFFf2f2f2),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(color: Color(0xFFf2f2f2), width: 1.5),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(color: Color(0xFFf2f2f2), width: 1.5),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(color: Color(0xFF5aaa85), width: 1.5),
+                ),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              ),
+              onChanged: (v) =>
+                  ref.read(contactSearchQueryProvider.notifier).state = v,
+            ),
           ),
-          prefixIconConstraints: const BoxConstraints(minWidth: 52),
-          filled: true,
-          fillColor: const Color(0xFFf2f2f2),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: const BorderSide(color: Color(0xFFf2f2f2), width: 1.5),
+          const SizedBox(width: 10),
+          // 갱신 버튼
+          GestureDetector(
+            onTap: isRefreshing ? null : onRefresh,
+            child: Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.06),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              alignment: Alignment.center,
+              child: isRefreshing
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Color(0xFF5aaa85),
+                      ),
+                    )
+                  : const Icon(Icons.refresh, color: Color(0xFF5aaa85), size: 20),
+            ),
           ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: const BorderSide(color: Color(0xFFf2f2f2), width: 1.5),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: const BorderSide(color: Color(0xFF5aaa85), width: 1.5),
-          ),
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        ),
-        onChanged: (v) =>
-            ref.read(contactSearchQueryProvider.notifier).state = v,
+        ],
       ),
     );
   }

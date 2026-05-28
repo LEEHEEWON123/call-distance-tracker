@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>위치 확인</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+      background: #f2f2f7;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      max-width: 430px;
+      margin: 0 auto;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* ── AppBar ── */
+    .appbar {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      z-index: 1000;
+      height: 56px;
+      background: rgba(255, 255, 255, 0.88);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 0.5px solid rgba(0,0,0,0.12);
+      display: flex;
+      align-items: center;
+      padding: 0 8px 0 4px;
+    }
+
+    .back-btn {
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .back-btn svg {
+      width: 11px;
+      height: 19px;
+    }
+
+    .appbar-title {
+      flex: 1;
+      font-size: 17px;
+      font-weight: 600;
+      color: #1C1C1E;
+      text-align: center;
+    }
+
+    .badge-call {
+      margin-right: 16px;
+      background: #34C759;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 10px;
+      white-space: nowrap;
+    }
+
+    /* ── Map ── */
+    #map {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      z-index: 0;
+    }
+
+    /* My location marker — 네이버 스타일 파란 원 */
+    .my-marker {
+      width: 18px;
+      height: 18px;
+      background: #4A90E2;
+      border-radius: 50%;
+      border: 3px solid #fff;
+      box-shadow: 0 0 0 4px rgba(74,144,226,0.20), 0 2px 6px rgba(0,0,0,0.25);
+    }
+
+    /* Their marker — 네이버 스타일 핀 + 말풍선 */
+    .their-marker-wrap {
+      position: relative;
+      width: 80px;
+      height: 64px;
+    }
+
+    /* 말풍선 라벨 */
+    .their-callout {
+      position: absolute;
+      top: 0; left: 50%;
+      transform: translateX(-50%);
+      background: #FF3B30;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 600;
+      white-space: nowrap;
+      padding: 5px 10px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(255,59,48,0.35);
+      letter-spacing: -0.2px;
+    }
+
+    .their-callout::after {
+      content: '';
+      position: absolute;
+      bottom: -5px;
+      left: 50%;
+      transform: translateX(-50%);
+      border-width: 5px 5px 0;
+      border-style: solid;
+      border-color: #FF3B30 transparent transparent;
+    }
+
+    /* 핀 원형 */
+    .their-pin {
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 16px;
+      height: 16px;
+      background: #FF3B30;
+      border-radius: 50%;
+      border: 2.5px solid #fff;
+      box-shadow: 0 2px 6px rgba(255,59,48,0.40);
+    }
+
+    /* ── Recenter button ── */
+    .recenter-btn {
+      position: absolute;
+      right: 16px;
+      bottom: 224px;
+      z-index: 900;
+      width: 44px;
+      height: 44px;
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.12);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    .recenter-btn svg {
+      width: 22px;
+      height: 22px;
+      fill: #007AFF;
+    }
+
+    /* ── Bottom Sheet ── */
+    .bottom-sheet {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      z-index: 900;
+      background: #fff;
+      border-radius: 24px 24px 0 0;
+      box-shadow: 0 -4px 24px rgba(0,0,0,0.08);
+      padding: 16px 20px 36px;
+    }
+
+    .handle {
+      width: 36px;
+      height: 4px;
+      background: #D1D1D6;
+      border-radius: 2px;
+      margin: 0 auto 16px;
+    }
+
+    /* Responder info row */
+    .info-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #007AFF, #5856D6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 16px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .info-texts .name {
+      font-size: 15px;
+      font-weight: 600;
+      color: #1C1C1E;
+    }
+
+    .info-texts .sub {
+      font-size: 12px;
+      color: #8E8E93;
+      margin-top: 2px;
+    }
+
+    /* Distance card */
+    .dist-card {
+      background: #F2F2F7;
+      border-radius: 16px;
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .dist-text .dist-value {
+      font-size: 28px;
+      font-weight: 700;
+      color: #1C1C1E;
+      line-height: 1;
+    }
+
+    .dist-text .dist-label {
+      font-size: 13px;
+      color: #8E8E93;
+      margin-top: 2px;
+    }
+
+    .dist-icon {
+      margin-left: auto;
+    }
+
+    .dist-icon svg {
+      width: 28px;
+      height: 28px;
+      fill: #8E8E93;
+    }
+
+    /* Stat row */
+    .stat-row {
+      display: flex;
+      gap: 10px;
+    }
+
+    .stat-card {
+      flex: 1;
+      background: #F2F2F7;
+      border-radius: 14px;
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .stat-card svg {
+      width: 22px;
+      height: 22px;
+      fill: #1C1C1E;
+      flex-shrink: 0;
+    }
+
+    .stat-value {
+      font-size: 16px;
+      font-weight: 700;
+      color: #1C1C1E;
+      line-height: 1;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: #8E8E93;
+      margin-top: 2px;
+    }
+
+    /* 줌 컨트롤 — 네이버 스타일 우측 원형 버튼 */
+    .zoom-controls {
+      position: absolute;
+      right: 16px;
+      bottom: 276px;
+      z-index: 900;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .zoom-btn {
+      width: 40px;
+      height: 40px;
+      background: #fff;
+      border: none;
+      border-radius: 50%;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      font-size: 22px;
+      font-weight: 300;
+      color: #333;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+    }
+
+    .zoom-btn:active { background: #f0f0f0; }
+
+    /* Leaflet overrides */
+    .leaflet-control-zoom { display: none; }
+    .leaflet-control-attribution { font-size: 9px; opacity: 0.4; }
+  </style>
+</head>
+<body>
+
+  <!-- AppBar -->
+  <div class="appbar">
+    <div class="back-btn" onclick="history.back()">
+      <svg viewBox="0 0 11 19" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M9.5 1.5L1.5 9.5L9.5 17.5" stroke="#007AFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div class="appbar-title">위치 확인</div>
+    <div class="badge-call">통화 중</div>
+  </div>
+
+  <!-- Map -->
+  <div id="map"></div>
+
+  <!-- 줌 컨트롤 -->
+  <div class="zoom-controls">
+    <button class="zoom-btn" id="zoomIn">+</button>
+    <button class="zoom-btn" id="zoomOut">−</button>
+  </div>
+
+  <!-- Recenter button -->
+  <div class="recenter-btn" id="recenterBtn" title="중심으로">
+    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3A8.994 8.994 0 0 0 13 3.06V1h-2v2.06A8.994 8.994 0 0 0 3.06 11H1v2h2.06A8.994 8.994 0 0 0 11 20.94V23h2v-2.06A8.994 8.994 0 0 0 20.94 13H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/>
+    </svg>
+  </div>
+
+  <!-- Bottom Sheet -->
+  <div class="bottom-sheet">
+    <div class="handle"></div>
+
+    <div class="info-row">
+      <div class="avatar">상</div>
+      <div class="info-texts">
+        <div class="name">상대방</div>
+        <div class="sub">방금 위치 공유됨</div>
+      </div>
+    </div>
+
+    <div class="dist-card">
+      <div class="dist-text">
+        <div class="dist-value" id="distValue">730m</div>
+        <div class="dist-label">직선 거리</div>
+      </div>
+      <div class="dist-icon">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M21 6.5l-4-4-1.41 1.41L17.17 5.5H6.83l1.58-1.59L7 2.5l-4 4 4 4 1.41-1.41L6.83 7.5h10.34l-1.58 1.59L17 10.5l4-4zM3 11h18v2H3z"/>
+        </svg>
+      </div>
+    </div>
+
+    <div class="stat-row">
+      <div class="stat-card">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M13.49 5.48c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm-3.6 13.9l1-4.4 2.1 2v6h2v-7.5l-2.1-2 .6-3c1.3 1.5 3.3 2.5 5.5 2.5v-2c-1.9 0-3.5-1-4.3-2.4l-1-1.6c-.4-.6-1-1-1.7-1-.3 0-.5.1-.8.1l-5.2 2.2v4.7h2v-3.4l1.8-.7-1.6 8.1-4.9-1-.4 2 7 1.4z"/>
+        </svg>
+        <div>
+          <div class="stat-value" id="walkVal">9분</div>
+          <div class="stat-label">도보</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/>
+        </svg>
+        <div>
+          <div class="stat-value" id="driveVal">1분</div>
+          <div class="stat-label">차량</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ── 좌표 (서울 샘플) ──
+    const myPos    = [37.5665, 126.9780];   // 내 위치
+    const theirPos = [37.5720, 126.9850];   // 상대방 위치
+    const center   = [
+      (myPos[0] + theirPos[0]) / 2,
+      (myPos[1] + theirPos[1]) / 2,
+    ];
+
+    // ── Haversine 거리 ──
+    function haversine(lat1, lng1, lat2, lng2) {
+      const R = 6371000;
+      const toRad = d => d * Math.PI / 180;
+      const dLat = toRad(lat2 - lat1);
+      const dLng = toRad(lng2 - lng1);
+      const a = Math.sin(dLat/2)**2
+              + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng/2)**2;
+      return R * 2 * Math.asin(Math.sqrt(a));
+    }
+
+    function formatDist(m) {
+      return m >= 1000 ? (m / 1000).toFixed(1) + 'km' : Math.round(m) + 'm';
+    }
+
+    const distM = haversine(...myPos, ...theirPos);
+    const walkMin  = Math.max(1, Math.round(distM / 5000 * 60));
+    const driveMin = Math.max(1, Math.round(distM / 50000 * 60));
+
+    document.getElementById('distValue').textContent = formatDist(distM);
+    document.getElementById('walkVal').textContent   = walkMin  + '분';
+    document.getElementById('driveVal').textContent  = driveMin + '분';
+
+    // ── Leaflet 지도 ──
+    const map = L.map('map', {
+      center,
+      zoom: 17,
+      zoomControl: false,
+      attributionControl: true,
+    });
+
+    // CartoDB Voyager — 건물 디테일 + 한국어 라벨 지원
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      subdomains: 'abcd',
+      maxZoom: 20,
+      attribution: '© OpenStreetMap © CARTO',
+    }).addTo(map);
+
+    // 내 위치 반경 원 (80m)
+    L.circle(myPos, {
+      radius: 80,
+      color: '#007AFF',
+      weight: 1,
+      fillColor: '#007AFF',
+      fillOpacity: 0.08,
+    }).addTo(map);
+
+    // 점선 연결
+    L.polyline([myPos, theirPos], {
+      color: 'rgba(0,122,255,0.6)',
+      weight: 2,
+      dashArray: '6 6',
+    }).addTo(map);
+
+    // 내 위치 마커 (파란 원)
+    const myIcon = L.divIcon({
+      className: '',
+      html: '<div class="my-marker"></div>',
+      iconSize: [20, 20],
+      iconAnchor: [10, 10],
+    });
+    L.marker(myPos, { icon: myIcon }).addTo(map);
+
+    // 상대방 마커 — 네이버 스타일 말풍선 + 핀
+    const theirIcon = L.divIcon({
+      className: '',
+      html: `
+        <div class="their-marker-wrap">
+          <div class="their-callout">상대방</div>
+          <div class="their-pin"></div>
+        </div>`,
+      iconSize: [80, 64],
+      iconAnchor: [40, 64],
+    });
+    L.marker(theirPos, { icon: theirIcon }).addTo(map);
+
+    // 리센터 버튼
+    document.getElementById('recenterBtn').addEventListener('click', () => {
+      map.setView(center, 17);
+    });
+
+    // 줌 버튼
+    document.getElementById('zoomIn').addEventListener('click', () => map.zoomIn());
+    document.getElementById('zoomOut').addEventListener('click', () => map.zoomOut());
+  </script>
+</body>
+</html>
