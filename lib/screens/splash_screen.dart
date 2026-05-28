@@ -123,7 +123,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const _CharactersRow(),
-            SizedBox(height: 28),
+            const SizedBox(height: 28),
             // NearMates 타이틀
             RichText(
               text: TextSpan(
@@ -149,8 +149,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                 ],
               ),
             ),
-            SizedBox(height: 8),
-            Text(
+            const SizedBox(height: 8),
+            const Text(
               '가까운 사람과 위치를 공유하세요',
               style: TextStyle(
                 fontSize: 13,
@@ -158,8 +158,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                 fontWeight: FontWeight.w500,
               ),
             ),
-            SizedBox(height: 48),
-            _LoadingDots(),
+            const SizedBox(height: 48),
+            const _LoadingDots(),
           ],
         ),
       ),
@@ -177,11 +177,11 @@ class _CharactersRow extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        _CharacterBall(color: const Color(0xFF89cfe8), eyeColor: const Color(0xFF2a6a90)),
+        const _CharacterBall(color: Color(0xFF89cfe8), eyeColor: Color(0xFF2a6a90)),
         const SizedBox(width: 6),
         const _ConnectDots(),
         const SizedBox(width: 6),
-        _CharacterBall(color: const Color(0xFFf5a878), eyeColor: const Color(0xFF904020)),
+        const _CharacterBall(color: Color(0xFFf5a878), eyeColor: Color(0xFF904020)),
       ],
     );
   }
