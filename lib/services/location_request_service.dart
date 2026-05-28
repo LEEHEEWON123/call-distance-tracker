@@ -77,7 +77,7 @@ class LocationRequestService {
   static Future<Map<String, dynamic>?> getRequestByToken(String token) async {
     final res = await supabase
         .from(_table)
-        .select('status, expires_at, requester_lat, requester_lng')
+        .select('*')
         .eq('token', token)
         .maybeSingle();
     return res;
