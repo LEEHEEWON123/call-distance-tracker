@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "354028910957",
+    "project_id": "nearmate-6667d",
+    "storage_bucket": "nearmate-6667d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:354028910957:android:a791615304e404023e4264",
+        "android_client_info": {
+          "package_name": "com.calltracker.call_distance_tracker"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB9KZNjGzsl1gPCJk-BM3XRecKd4pXp42s"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -5,6 +5,7 @@ import '../core/device_id.dart';
 import '../core/my_phone_store.dart';
 import '../core/supabase_client.dart';
 import '../providers/incoming_request_provider.dart';
+import '../services/fcm_service.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -41,6 +42,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     final savedPhone = await MyPhoneStore.get();
     if (savedPhone != null && savedPhone.isNotEmpty) {
       ref.read(myPhoneProvider.notifier).state = savedPhone;
+      await FcmService.init(savedPhone);
       _goHome();
     } else {
       _showPhoneInput();
@@ -92,8 +94,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
               final phone = controller.text.trim();
               if (phone.isEmpty) return;
               await MyPhoneStore.set(phone);
-              ref.read(myPhoneProvider.notifier).state =
-                  phone.replaceAll(RegExp(r'[\s\-]'), '');
+              final normalized = phone.replaceAll(RegExp(r'[\s\-]'), '');
+              ref.read(myPhoneProvider.notifier).state = normalized;
+              await FcmService.init(normalized);
               if (ctx.mounted) Navigator.of(ctx).pop();
               _goHome();
             },

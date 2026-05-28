@@ -5,6 +5,7 @@ import 'package:share_plus/share_plus.dart';
 import '../core/device_id.dart';
 import '../providers/contacts_provider.dart';
 import '../providers/location_request_provider.dart';
+import '../services/fcm_service.dart';
 import '../services/location_service.dart';
 import '../services/location_request_service.dart';
 
@@ -545,6 +546,12 @@ class _ContactCard extends ConsumerWidget {
 
       ref.read(activeTokenProvider.notifier).state = token;
       ref.read(requestingPhoneProvider.notifier).state = phoneNumber;
+
+      // FCM 푸시 알림 전송 (앱이 백그라운드/종료 상태인 경우를 위해)
+      await FcmService.sendLocationRequestPush(
+        responderPhone: phoneNumber.replaceAll(RegExp(r'[\s\-]'), ''),
+        requesterName: contact.displayName,
+      );
 
       final shareText = LocationRequestService.buildShareMessage(token);
       await Share.share(shareText);
