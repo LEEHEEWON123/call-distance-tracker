@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NearMates Splash</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #f4f7fb;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      font-family: -apple-system, 'Apple SD Gothic Neo', sans-serif;
+      overflow: hidden;
+    }
+
+    .screen {
+      width: 390px;
+      height: 844px;
+      background: #f4f7fb;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* 배경 원형 장식 */
+    .bg-circle-1 {
+      position: absolute;
+      width: 320px;
+      height: 320px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(93,170,200,0.08) 0%, transparent 70%);
+      top: 120px;
+      left: -60px;
+    }
+    .bg-circle-2 {
+      position: absolute;
+      width: 280px;
+      height: 280px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(229,130,90,0.08) 0%, transparent 70%);
+      bottom: 160px;
+      right: -40px;
+    }
+
+    /* 캐릭터 컨테이너 */
+    .characters {
+      display: flex;
+      align-items: flex-end;
+      gap: 0px;
+      margin-bottom: 32px;
+      animation: floatUp 0.7s ease-out forwards;
+      opacity: 0;
+      transform: translateY(20px);
+    }
+
+    .character {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* 위치 핀 뱃지 */
+    .pin-badge {
+      position: absolute;
+      top: -8px;
+      right: -4px;
+      width: 26px;
+      height: 26px;
+      border-radius: 50% 50% 50% 0;
+      transform: rotate(-45deg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    .pin-badge.blue { background: #6ab0d8; }
+    .pin-badge.orange { background: #e07830; }
+    .pin-badge::after {
+      content: '';
+      width: 10px;
+      height: 10px;
+      background: white;
+      border-radius: 50%;
+      transform: rotate(45deg);
+    }
+
+    /* 캐릭터 SVG 래퍼 */
+    .char-img {
+      width: 120px;
+      height: 120px;
+      filter: drop-shadow(0 8px 20px rgba(0,0,0,0.10));
+    }
+
+    /* 연결 점선 */
+    .dots {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      margin: 0 4px;
+      margin-bottom: 20px;
+    }
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #f5c060;
+      animation: pulse 1.2s ease-in-out infinite;
+    }
+    .dot:nth-child(2) { animation-delay: 0.2s; }
+    .dot:nth-child(3) { animation-delay: 0.4s; }
+
+    /* 앱 이름 */
+    .app-name {
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: -1px;
+      margin-bottom: 10px;
+      animation: floatUp 0.7s ease-out 0.15s forwards;
+      opacity: 0;
+      transform: translateY(16px);
+    }
+    .app-name .near { color: #6ab0d8; }
+    .app-name .mates { color: #e07830; }
+
+    /* 서브타이틀 */
+    .subtitle {
+      font-size: 14px;
+      color: #96a3b4;
+      font-weight: 500;
+      letter-spacing: 0.2px;
+      margin-bottom: 52px;
+      animation: floatUp 0.7s ease-out 0.25s forwards;
+      opacity: 0;
+      transform: translateY(12px);
+    }
+
+    /* 로딩 인디케이터 */
+    .loading {
+      display: flex;
+      gap: 8px;
+      animation: floatUp 0.7s ease-out 0.4s forwards;
+      opacity: 0;
+    }
+    .loading-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      animation: loadingPulse 1.0s ease-in-out infinite;
+    }
+    .loading-dot:nth-child(1) { background: #6ab0d8; animation-delay: 0s; }
+    .loading-dot:nth-child(2) { background: #f5c060; animation-delay: 0.18s; }
+    .loading-dot:nth-child(3) { background: #e07830; animation-delay: 0.36s; }
+
+    @keyframes floatUp {
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 0.5; }
+      50% { transform: scale(1.3); opacity: 1; }
+    }
+    @keyframes loadingPulse {
+      0%, 100% { transform: scale(0.7); opacity: 0.4; }
+      50% { transform: scale(1.2); opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+  <div class="screen">
+    <div class="bg-circle-1"></div>
+    <div class="bg-circle-2"></div>
+
+    <div class="characters">
+      <!-- 파란 캐릭터 -->
+      <div class="character">
+        <div class="pin-badge blue"></div>
+        <svg class="char-img" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- 그림자 -->
+          <ellipse cx="50" cy="96" rx="28" ry="5" fill="#c8e8f5" opacity="0.5"/>
+          <!-- 몸통 — 완전 동그란 공 모양 -->
+          <circle cx="50" cy="50" r="40" fill="#89cfe8"/>
+          <!-- 하이라이트 -->
+          <ellipse cx="38" cy="32" rx="10" ry="7" fill="white" opacity="0.25" transform="rotate(-20 38 32)"/>
+          <!-- 볼터치 -->
+          <ellipse cx="26" cy="60" rx="8" ry="5" fill="#b8dff0" opacity="0.6"/>
+          <ellipse cx="74" cy="60" rx="8" ry="5" fill="#b8dff0" opacity="0.6"/>
+          <!-- 눈 -->
+          <circle cx="38" cy="44" r="7" fill="white"/>
+          <circle cx="62" cy="44" r="7" fill="white"/>
+          <circle cx="39.5" cy="45" r="4" fill="#2a6a90"/>
+          <circle cx="63.5" cy="45" r="4" fill="#2a6a90"/>
+          <circle cx="41" cy="43" r="1.5" fill="white"/>
+          <circle cx="64.5" cy="43" r="1.5" fill="white"/>
+          <!-- 입 -->
+          <path d="M38 60 Q50 70 62 60" stroke="#2a6a90" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+        </svg>
+      </div>
+
+      <!-- 연결 점들 -->
+      <div class="dots">
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+      </div>
+
+      <!-- 주황 캐릭터 -->
+      <div class="character">
+        <div class="pin-badge orange"></div>
+        <svg class="char-img" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- 그림자 -->
+          <ellipse cx="50" cy="96" rx="28" ry="5" fill="#f5c8a0" opacity="0.5"/>
+          <!-- 몸통 — 완전 동그란 공 모양 -->
+          <circle cx="50" cy="50" r="40" fill="#f5a878"/>
+          <!-- 하이라이트 -->
+          <ellipse cx="38" cy="32" rx="10" ry="7" fill="white" opacity="0.25" transform="rotate(-20 38 32)"/>
+          <!-- 볼터치 -->
+          <ellipse cx="26" cy="60" rx="8" ry="5" fill="#f8c8a0" opacity="0.6"/>
+          <ellipse cx="74" cy="60" rx="8" ry="5" fill="#f8c8a0" opacity="0.6"/>
+          <!-- 눈 -->
+          <circle cx="38" cy="44" r="7" fill="white"/>
+          <circle cx="62" cy="44" r="7" fill="white"/>
+          <circle cx="39.5" cy="45" r="4" fill="#904020"/>
+          <circle cx="63.5" cy="45" r="4" fill="#904020"/>
+          <circle cx="41" cy="43" r="1.5" fill="white"/>
+          <circle cx="64.5" cy="43" r="1.5" fill="white"/>
+          <!-- 입 -->
+          <path d="M38 60 Q50 70 62 60" stroke="#904020" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+        </svg>
+      </div>
+    </div>
+
+    <div class="app-name">
+      <span class="near">Near</span><span class="mates">Mates</span>
+    </div>
+    <div class="subtitle">가까운 사람과 위치를 공유하세요</div>
+
+    <div class="loading">
+      <div class="loading-dot"></div>
+      <div class="loading-dot"></div>
+      <div class="loading-dot"></div>
+    </div>
+  </div>
+</body>
+</html>
