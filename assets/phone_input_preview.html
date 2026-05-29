@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Phone Input Dialog</title>
+  <link href="https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #e8ecf0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      font-family: 'Noto Sans KR', -apple-system, sans-serif;
+    }
+
+    .screen {
+      width: 390px;
+      height: 844px;
+      background: #f4f7fb;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+      border-radius: 40px;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.18);
+    }
+
+    /* 배경 블러 오버레이 */
+    .overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(28, 35, 51, 0.35);
+      backdrop-filter: blur(4px);
+      border-radius: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* 스플래시 배경 (뒤에 깔리는 용) */
+    .splash-bg {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+    }
+    .splash-chars {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      opacity: 0.6;
+    }
+    .splash-title {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -1px;
+      opacity: 0.5;
+    }
+    .splash-title .near { color: #6ab8d4; }
+    .splash-title .mates { color: #e07830; }
+
+    /* 다이얼로그 카드 */
+    .dialog {
+      background: white;
+      border-radius: 24px;
+      width: 320px;
+      padding: 28px 24px 20px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.18);
+      animation: popIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+      position: relative;
+      z-index: 10;
+    }
+
+    @keyframes popIn {
+      from { transform: scale(0.85); opacity: 0; }
+      to   { transform: scale(1);    opacity: 1; }
+    }
+
+    /* 상단 캐릭터 */
+    .dialog-char {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 16px;
+    }
+
+    /* 제목 */
+    .dialog-title {
+      font-family: 'Jua', sans-serif;
+      font-size: 17px;
+      font-weight: 400;
+      color: #5a6475;
+      text-align: center;
+      margin-bottom: 4px;
+      letter-spacing: 0px;
+    }
+
+    /* 설명 */
+    .dialog-desc {
+      font-size: 13px;
+      color: #96a3b4;
+      text-align: center;
+      line-height: 1.65;
+      margin-bottom: 20px;
+    }
+
+    /* 입력 필드 */
+    .input-wrap {
+      position: relative;
+      margin-bottom: 20px;
+    }
+    .input-wrap input {
+      width: 100%;
+      padding: 14px 16px 14px 44px;
+      border: 1.5px solid #e8ecf2;
+      border-radius: 14px;
+      font-family: 'Jua', sans-serif;
+      font-size: 16px;
+      font-weight: 400;
+      color: #3a4455;
+      background: #f8fafc;
+      outline: none;
+      transition: border-color 0.2s;
+      letter-spacing: 2px;
+    }
+    .input-wrap input:focus {
+      border-color: #6ab8d4;
+      background: white;
+    }
+    .input-wrap input::placeholder {
+      color: #c0cad8;
+      font-weight: 400;
+      letter-spacing: 0;
+    }
+    .input-icon {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      align-items: center;
+    }
+
+    /* 확인 버튼 */
+    .btn-confirm {
+      width: 100%;
+      padding: 15px;
+      border: none;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #f5a060, #e07830);
+      color: white;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 8px 20px rgba(224, 120, 48, 0.35);
+      transition: transform 0.1s, box-shadow 0.1s;
+    }
+    .btn-confirm:active {
+      transform: scale(0.97);
+      box-shadow: 0 4px 10px rgba(224, 120, 48, 0.25);
+    }
+
+    /* 안내 태그 */
+    .privacy-note {
+      text-align: center;
+      font-size: 11px;
+      color: #b0bac8;
+      margin-top: 12px;
+    }
+    .privacy-note span {
+      color: #6ab8d4;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="screen">
+    <!-- 스플래시 배경 -->
+    <div class="splash-bg">
+      <div class="splash-chars">
+        <!-- 파란 캐릭터 미니 -->
+        <svg width="72" height="72" viewBox="0 0 100 100" fill="none">
+          <circle cx="50" cy="50" r="44" fill="#89cfe8"/>
+          <ellipse cx="36" cy="36" rx="8" ry="6" fill="white" opacity="0.2" transform="rotate(-20 36 36)"/>
+          <circle cx="37" cy="46" r="8" fill="white"/>
+          <circle cx="63" cy="46" r="8" fill="white"/>
+          <circle cx="38.5" cy="47" r="4.5" fill="#2a6a90"/>
+          <circle cx="64.5" cy="47" r="4.5" fill="#2a6a90"/>
+          <circle cx="40" cy="45" r="1.8" fill="white"/>
+          <circle cx="66" cy="45" r="1.8" fill="white"/>
+          <path d="M38 62 Q50 72 62 62" stroke="#2a6a90" stroke-width="3" stroke-linecap="round" fill="none"/>
+        </svg>
+        <!-- 점 -->
+        <div style="display:flex;gap:5px;">
+          <div style="width:7px;height:7px;border-radius:50%;background:#f5c060;opacity:0.7"></div>
+          <div style="width:7px;height:7px;border-radius:50%;background:#f5c060;opacity:0.5"></div>
+          <div style="width:7px;height:7px;border-radius:50%;background:#f5c060;opacity:0.3"></div>
+        </div>
+        <!-- 주황 캐릭터 미니 -->
+        <svg width="72" height="72" viewBox="0 0 100 100" fill="none">
+          <circle cx="50" cy="50" r="44" fill="#f5a878"/>
+          <ellipse cx="36" cy="36" rx="8" ry="6" fill="white" opacity="0.2" transform="rotate(-20 36 36)"/>
+          <circle cx="37" cy="46" r="8" fill="white"/>
+          <circle cx="63" cy="46" r="8" fill="white"/>
+          <circle cx="38.5" cy="47" r="4.5" fill="#904020"/>
+          <circle cx="64.5" cy="47" r="4.5" fill="#904020"/>
+          <circle cx="40" cy="45" r="1.8" fill="white"/>
+          <circle cx="66" cy="45" r="1.8" fill="white"/>
+          <path d="M38 62 Q50 72 62 62" stroke="#904020" stroke-width="3" stroke-linecap="round" fill="none"/>
+        </svg>
+      </div>
+      <div class="splash-title">
+        <span class="near">Near</span><span class="mates">Mates</span>
+      </div>
+    </div>
+
+    <!-- 오버레이 + 다이얼로그 -->
+    <div class="overlay">
+      <div class="dialog">
+        <!-- 앱 아이콘 -->
+        <div class="dialog-char">
+          <img src="icon/app_icon.png" width="72" height="72" style="border-radius:18px; box-shadow:0 4px 16px rgba(0,0,0,0.10);">
+        </div>
+
+        <div class="dialog-title">상대방과 정확한 위치 계산을 위해<br>전화번호를 등록해주세요.</div>
+
+        <div class="input-wrap">
+          <span class="input-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <rect x="5" y="2" width="14" height="20" rx="4" fill="#89cfe8"/>
+              <rect x="7" y="4" width="10" height="14" rx="2" fill="white" opacity="0.9"/>
+              <circle cx="12" cy="20" r="1.2" fill="white" opacity="0.8"/>
+              <circle cx="9" cy="7" r="1" fill="#89cfe8"/>
+              <rect x="10.5" y="6.2" width="4" height="1.6" rx="0.8" fill="#89cfe8"/>
+            </svg>
+          </span>
+          <input id="phoneInput" type="tel" placeholder="010-0000-0000" value="">
+        </div>
+
+        <button class="btn-confirm">확인</button>
+        <div class="privacy-note">번호는 <span>기기에만</span> 저장되며 외부로 공유되지 않아요.</div>
+      </div>
+    </div>
+  </div>
+  <script>
+    const input = document.getElementById('phoneInput');
+    input.addEventListener('input', (e) => {
+      let digits = e.target.value.replace(/\D/g, '').slice(0, 11);
+      let formatted = '';
+      if (digits.length <= 3) {
+        formatted = digits;
+      } else if (digits.length <= 7) {
+        formatted = digits.slice(0, 3) + '-' + digits.slice(3);
+      } else {
+        formatted = digits.slice(0, 3) + '-' + digits.slice(3, 7) + '-' + digits.slice(7);
+      }
+      e.target.value = formatted;
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>위치 공유 동의</title>
+  <link href="https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #e8ecf0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      font-family: 'Noto Sans KR', sans-serif;
+    }
+
+    .screen {
+      width: 390px;
+      height: 844px;
+      background: #f4f7fb;
+      border-radius: 40px;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.18);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 32px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* 배경 장식 */
+    .bg-blob-1 {
+      position: absolute;
+      width: 300px; height: 300px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(138,207,232,0.12) 0%, transparent 70%);
+      top: 60px; left: -80px;
+    }
+    .bg-blob-2 {
+      position: absolute;
+      width: 250px; height: 250px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(245,168,120,0.10) 0%, transparent 70%);
+      bottom: 100px; right: -60px;
+    }
+
+    /* 캐릭터 */
+    .char-wrap {
+      position: relative;
+      margin-bottom: 32px;
+      animation: float 3s ease-in-out infinite;
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+
+    /* 알림 뱃지 */
+    .notif-badge {
+      position: absolute;
+      top: -6px; right: -6px;
+      width: 28px; height: 28px;
+      background: linear-gradient(135deg, #f5a060, #e07830);
+      border-radius: 50%;
+      border: 2px solid white;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 2px 8px rgba(224,120,48,0.4);
+      animation: ping 1.5s ease-in-out infinite;
+    }
+    @keyframes ping {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.15); }
+    }
+
+    /* 요청자 정보 카드 */
+    .requester-card {
+      background: white;
+      border-radius: 20px;
+      padding: 20px 24px;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 28px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.07);
+    }
+    .requester-avatar {
+      width: 52px; height: 52px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #93b5e1, #7098c8);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; font-weight: 700; color: white;
+      flex-shrink: 0;
+    }
+    .requester-info {}
+    .requester-label {
+      font-size: 11px;
+      color: #96a3b4;
+      font-weight: 500;
+      margin-bottom: 3px;
+    }
+    .requester-name {
+      font-size: 16px;
+      font-weight: 700;
+      color: #1c1c1e;
+    }
+
+    /* 메인 텍스트 */
+    .main-title {
+      font-family: 'Jua', sans-serif;
+      font-size: 22px;
+      color: #1c2333;
+      text-align: center;
+      margin-bottom: 10px;
+      line-height: 1.4;
+    }
+    .main-desc {
+      font-size: 13px;
+      color: #96a3b4;
+      text-align: center;
+      line-height: 1.7;
+      margin-bottom: 40px;
+    }
+
+    /* 허용 버튼 */
+    .btn-allow {
+      width: 100%;
+      padding: 18px;
+      border: none;
+      border-radius: 20px;
+      background: linear-gradient(135deg, #f5a060, #e07830);
+      color: white;
+      font-family: 'Noto Sans KR', sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 10px 28px rgba(224,120,48,0.4);
+      margin-bottom: 14px;
+      transition: transform 0.1s;
+    }
+    .btn-allow:active { transform: scale(0.97); }
+
+    /* 거절 버튼 */
+    .btn-deny {
+      background: none;
+      border: none;
+      font-family: 'Noto Sans KR', sans-serif;
+      font-size: 14px;
+      color: #b0bac8;
+      cursor: pointer;
+      padding: 8px;
+    }
+
+    /* 만료 안내 */
+    .expire-note {
+      position: absolute;
+      bottom: 40px;
+      font-size: 11px;
+      color: #c0cad8;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="screen">
+    <div class="bg-blob-1"></div>
+    <div class="bg-blob-2"></div>
+
+    <!-- 캐릭터 -->
+    <div class="char-wrap">
+      <svg width="110" height="110" viewBox="0 0 100 100" fill="none">
+        <ellipse cx="50" cy="93" rx="26" ry="5" fill="#89cfe8" opacity="0.2"/>
+        <circle cx="50" cy="50" r="44" fill="#89cfe8"/>
+        <ellipse cx="36" cy="34" rx="10" ry="7" fill="white" opacity="0.2" transform="rotate(-20 36 34)"/>
+        <ellipse cx="26" cy="60" rx="8" ry="5" fill="white" opacity="0.2"/>
+        <ellipse cx="74" cy="60" rx="8" ry="5" fill="white" opacity="0.2"/>
+        <circle cx="37" cy="46" r="8" fill="white"/>
+        <circle cx="63" cy="46" r="8" fill="white"/>
+        <circle cx="38.5" cy="47" r="4.5" fill="#2a6a90"/>
+        <circle cx="64.5" cy="47" r="4.5" fill="#2a6a90"/>
+        <circle cx="40" cy="45" r="1.8" fill="white"/>
+        <circle cx="66" cy="45" r="1.8" fill="white"/>
+        <path d="M38 62 Q50 72 62 62" stroke="#2a6a90" stroke-width="3" stroke-linecap="round" fill="none"/>
+      </svg>
+      <div class="notif-badge">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="white">
+          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- 요청자 카드 -->
+    <div class="requester-card">
+      <div class="requester-avatar">이</div>
+      <div class="requester-info">
+        <div class="requester-label">위치 요청</div>
+        <div class="requester-name">이지원님이 요청했어요</div>
+      </div>
+    </div>
+
+    <!-- 메인 텍스트 -->
+    <div class="main-title">위치를 공유할까요?</div>
+    <div class="main-desc">
+      허용하면 현재 위치가 상대방에게<br>
+      한 번만 공유돼요.
+    </div>
+
+    <!-- 버튼 -->
+    <button class="btn-allow">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
+        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+      </svg>
+      위치 공유 허용
+    </button>
+    <button class="btn-deny">나중에 할게요</button>
+
+    <div class="expire-note">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="#c0cad8">
+        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+      </svg>
+      요청은 10분 후 만료돼요
+    </div>
+  </div>
+</body>
+</html>
