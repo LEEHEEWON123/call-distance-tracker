@@ -12,6 +12,7 @@ class LocationRequestService {
     required double requesterLat,
     required double requesterLng,
     String? responderPhone,
+    String? requesterPhone,
   }) async {
     final token = const Uuid().v4();
     await supabase.from(_table).insert({
@@ -20,6 +21,7 @@ class LocationRequestService {
       'requester_lat': requesterLat,
       'requester_lng': requesterLng,
       if (responderPhone != null) 'responder_phone': responderPhone,
+      if (requesterPhone != null) 'requester_phone': requesterPhone,
     });
     return token;
   }

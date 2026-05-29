@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import '../core/constants.dart';
@@ -24,6 +25,7 @@ class _ConsentScreenState extends State<ConsentScreen>
   _PageState _state = _PageState.loading;
   String _errorMsg = '';
   Map<String, dynamic>? _requestData;
+  String _requesterName = '누군가';
   late AnimationController _floatCtrl;
   late Animation<double> _floatAnim;
 
@@ -65,6 +67,31 @@ class _ConsentScreenState extends State<ConsentScreen>
         return;
       }
       _requestData = data;
+
+      // requester_phone으로 연락처 이름 조회
+      final requesterPhone = data['requester_phone'] as String?;
+      if (requesterPhone != null && requesterPhone.isNotEmpty) {
+        try {
+          final hasPermission = await FlutterContacts.requestPermission(readonly: true);
+          if (hasPermission) {
+            final contacts = await FlutterContacts.getContacts(withProperties: true);
+            final normalized = requesterPhone.replaceAll(RegExp(r'\D'), '');
+            for (final c in contacts) {
+              final match = c.phones.any((p) =>
+                  p.number.replaceAll(RegExp(r'\D'), '') == normalized);
+              if (match) {
+                _requesterName = c.displayName;
+                break;
+              }
+            }
+            if (_requesterName == '누군가') {
+              // 연락처에 없으면 전화번호 그대로 표시
+              _requesterName = requesterPhone;
+            }
+          }
+        } catch (_) {}
+      }
+
       setState(() => _state = _PageState.ready);
     } catch (e) {
       if (!mounted) return;
@@ -204,7 +231,7 @@ class _ConsentScreenState extends State<ConsentScreen>
                           ),
                           const SizedBox(height: 3),
                           Text(
-                            '누군가 위치를 요청했어요',
+                            '$_requesterName님이 요청했어요',
                             style: GoogleFonts.jua(
                               fontSize: 15,
                               color: const Color(0xFF1c1c1e),

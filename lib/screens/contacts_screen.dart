@@ -3,6 +3,7 @@ import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 import '../core/device_id.dart';
+import '../core/my_phone_store.dart';
 import '../providers/contacts_provider.dart';
 import '../providers/location_request_provider.dart';
 import '../services/fcm_service.dart';
@@ -536,12 +537,14 @@ class _ContactCard extends ConsumerWidget {
     try {
       final position = await LocationService.getCurrentPosition();
       final deviceId = await DeviceId.getOrCreate();
+      final myPhone = await MyPhoneStore.get();
 
       final token = await LocationRequestService.createRequest(
         requesterId: deviceId,
         requesterLat: position.latitude,
         requesterLng: position.longitude,
         responderPhone: phoneNumber.replaceAll(RegExp(r'[\s\-]'), ''),
+        requesterPhone: myPhone,
       );
 
       ref.read(activeTokenProvider.notifier).state = token;
