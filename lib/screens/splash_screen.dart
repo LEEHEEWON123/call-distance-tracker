@@ -1,6 +1,8 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../core/device_id.dart';
 import '../core/my_phone_store.dart';
@@ -59,57 +61,132 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(
-          '내 전화번호',
-          style: TextStyle(fontWeight: FontWeight.w700),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              '위치 요청을 수신하려면\n내 전화번호를 입력해주세요.',
-              style: TextStyle(fontSize: 13, color: Color(0xFF96a3b4)),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: controller,
-              keyboardType: TextInputType.phone,
-              decoration: InputDecoration(
-                hintText: '010-0000-0000',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 앱 아이콘
+              ClipRRect(
+                borderRadius: BorderRadius.circular(18),
+                child: Image.asset(
+                  'assets/icon/app_icon.png',
+                  width: 72,
+                  height: 72,
                 ),
-                contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 14, vertical: 12),
               ),
-              autofocus: true,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () async {
-              final phone = controller.text.trim();
-              if (phone.isEmpty) return;
-              await MyPhoneStore.set(phone);
-              final normalized = phone.replaceAll(RegExp(r'[\s\-]'), '');
-              ref.read(myPhoneProvider.notifier).state = normalized;
-              await FcmService.init(normalized);
-              if (ctx.mounted) Navigator.of(ctx).pop();
-              _goHome();
-            },
-            child: const Text(
-              '확인',
-              style: TextStyle(
-                color: Color(0xFFe07830),
-                fontWeight: FontWeight.w700,
+              const SizedBox(height: 16),
+
+              // 안내 문구
+              Text(
+                '상대방과 정확한 위치 계산을 위해\n전화번호를 등록해주세요.',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.jua(
+                  fontSize: 15,
+                  color: const Color(0xFF5a6475),
+                ),
               ),
-            ),
+              const SizedBox(height: 20),
+
+              // 전화번호 입력
+              TextField(
+                controller: controller,
+                keyboardType: TextInputType.phone,
+                autofocus: true,
+                inputFormatters: [_PhoneNumberFormatter()],
+                style: GoogleFonts.jua(
+                  fontSize: 16,
+                  color: const Color(0xFF3a4455),
+                  letterSpacing: 1.5,
+                ),
+                decoration: InputDecoration(
+                  hintText: '010-0000-0000',
+                  hintStyle: GoogleFonts.jua(
+                    color: const Color(0xFFc0cad8),
+                    letterSpacing: 1,
+                  ),
+                  prefixIcon: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: _PhoneIcon(),
+                  ),
+                  filled: true,
+                  fillColor: const Color(0xFFf8fafc),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(color: Color(0xFFe8ecf2), width: 1.5),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(color: Color(0xFFe8ecf2), width: 1.5),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(color: Color(0xFF89cfe8), width: 1.5),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // 확인 버튼
+              SizedBox(
+                width: double.infinity,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFf5a060), Color(0xFFe07830)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFFe07830).withValues(alpha: 0.35),
+                        blurRadius: 14,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: TextButton(
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                    onPressed: () async {
+                      final phone = controller.text.trim();
+                      if (phone.isEmpty) return;
+                      await MyPhoneStore.set(phone);
+                      final normalized = phone.replaceAll(RegExp(r'[\s\-]'), '');
+                      ref.read(myPhoneProvider.notifier).state = normalized;
+                      await FcmService.init(normalized);
+                      if (ctx.mounted) Navigator.of(ctx).pop();
+                      _goHome();
+                    },
+                    child: Text(
+                      '확인',
+                      style: GoogleFonts.jua(
+                        fontSize: 15,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 10),
+              Text(
+                '번호는 기기에만 저장되며 외부로 공유되지 않아요.',
+                style: GoogleFonts.jua(
+                  fontSize: 11,
+                  color: const Color(0xFFb0bac8),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -366,4 +443,57 @@ class _LoadingDotsState extends State<_LoadingDots> with SingleTickerProviderSta
       ),
     );
   }
+}
+
+// ── 전화번호 자동 포맷 (010-XXXX-XXXX) ───────────────────────
+class _PhoneNumberFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(TextEditingValue old, TextEditingValue next) {
+    final digits = next.text.replaceAll(RegExp(r'\D'), '');
+    final limited = digits.length > 11 ? digits.substring(0, 11) : digits;
+    String formatted;
+    if (limited.length <= 3) {
+      formatted = limited;
+    } else if (limited.length <= 7) {
+      formatted = '${limited.substring(0, 3)}-${limited.substring(3)}';
+    } else {
+      formatted = '${limited.substring(0, 3)}-${limited.substring(3, 7)}-${limited.substring(7)}';
+    }
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+    );
+  }
+}
+
+// ── 귀여운 폰 SVG 아이콘 ──────────────────────────────────────
+class _PhoneIcon extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(size: const Size(22, 22), painter: _PhoneIconPainter());
+  }
+}
+
+class _PhoneIconPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final body = RRect.fromRectAndRadius(
+      Rect.fromLTWH(3, 0, size.width - 6, size.height),
+      const Radius.circular(5),
+    );
+    canvas.drawRRect(body, Paint()..color = const Color(0xFF89cfe8));
+    final screen = RRect.fromRectAndRadius(
+      Rect.fromLTWH(5, 2.5, size.width - 10, size.height - 7),
+      const Radius.circular(3),
+    );
+    canvas.drawRRect(screen, Paint()..color = Colors.white.withValues(alpha: 0.9));
+    canvas.drawCircle(
+      Offset(size.width / 2, size.height - 2),
+      1.5,
+      Paint()..color = Colors.white.withValues(alpha: 0.8),
+    );
+  }
+
+  @override
+  bool shouldRepaint(_PhoneIconPainter old) => false;
 }
