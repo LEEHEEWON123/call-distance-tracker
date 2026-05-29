@@ -120,6 +120,7 @@ class _ConsentScreenState extends State<ConsentScreen>
           responderLat: pos.latitude,
           responderLng: pos.longitude,
           responderPhone: data['responder_phone'] as String?,
+          requesterPhone: data['requester_phone'] as String?,
           status: LocationRequestStatus.completed,
           createdAt: DateTime.parse(data['created_at'] as String),
           expiresAt: DateTime.parse(data['expires_at'] as String),

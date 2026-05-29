@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart' hide Path;
 import '../models/location_request.dart';
@@ -19,11 +20,13 @@ class _MapScreenState extends State<MapScreen> {
   late final LatLng _theirPos;
   late final LatLng _center;
   late final double _distanceMeters;
+  String _requesterName = '상대방';
 
   @override
   void initState() {
     super.initState();
     _mapController = MapController();
+    _lookupRequesterName();
     _myPos = LatLng(
       widget.locationRequest.requesterLat,
       widget.locationRequest.requesterLng,
@@ -44,6 +47,27 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
+  Future<void> _lookupRequesterName() async {
+    final phone = widget.locationRequest.requesterPhone;
+    if (phone == null || phone.isEmpty) return;
+    try {
+      final hasPermission = await FlutterContacts.requestPermission(readonly: true);
+      if (!hasPermission) return;
+      final contacts = await FlutterContacts.getContacts(withProperties: true);
+      final normalized = phone.replaceAll(RegExp(r'\D'), '');
+      for (final c in contacts) {
+        final match = c.phones.any(
+            (p) => p.number.replaceAll(RegExp(r'\D'), '') == normalized);
+        if (match) {
+          if (mounted) setState(() => _requesterName = c.displayName);
+          return;
+        }
+      }
+      // 연락처에 없으면 전화번호 표시
+      if (mounted) setState(() => _requesterName = phone);
+    } catch (_) {}
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -55,7 +79,7 @@ class _MapScreenState extends State<MapScreen> {
           _buildRecenterButton(),
           Align(
             alignment: Alignment.bottomCenter,
-            child: _BottomSheet(distanceMeters: _distanceMeters),
+            child: _BottomSheet(distanceMeters: _distanceMeters, requesterName: _requesterName),
           ),
         ],
       ),
@@ -286,8 +310,9 @@ class _CalloutArrowPainter extends CustomPainter {
 
 class _BottomSheet extends StatelessWidget {
   final double distanceMeters;
+  final String requesterName;
 
-  const _BottomSheet({required this.distanceMeters});
+  const _BottomSheet({required this.distanceMeters, required this.requesterName});
 
   @override
   Widget build(BuildContext context) {
@@ -337,9 +362,9 @@ class _BottomSheet extends StatelessWidget {
                   shape: BoxShape.circle,
                 ),
                 alignment: Alignment.center,
-                child: const Text(
-                  '상',
-                  style: TextStyle(
+                child: Text(
+                  requesterName.isNotEmpty ? requesterName[0].toUpperCase() : '?',
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
@@ -347,19 +372,19 @@ class _BottomSheet extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 12),
-              const Column(
+              Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '상대방',
-                    style: TextStyle(
+                    requesterName,
+                    style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
                       color: Color(0xFF1C1C1E),
                     ),
                   ),
-                  SizedBox(height: 2),
-                  Text(
+                  const SizedBox(height: 2),
+                  const Text(
                     '방금 위치 공유됨',
                     style: TextStyle(fontSize: 12, color: Color(0xFF8E8E93)),
                   ),

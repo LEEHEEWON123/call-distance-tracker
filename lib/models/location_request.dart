@@ -9,6 +9,7 @@ class LocationRequest {
   final double? responderLat;
   final double? responderLng;
   final String? responderPhone;
+  final String? requesterPhone;
   final LocationRequestStatus status;
   final DateTime createdAt;
   final DateTime expiresAt;
@@ -22,6 +23,7 @@ class LocationRequest {
     this.responderLat,
     this.responderLng,
     this.responderPhone,
+    this.requesterPhone,
     required this.status,
     required this.createdAt,
     required this.expiresAt,
@@ -42,6 +44,7 @@ class LocationRequest {
       responderLat: (json['responder_lat'] as num?)?.toDouble(),
       responderLng: (json['responder_lng'] as num?)?.toDouble(),
       responderPhone: json['responder_phone'] as String?,
+      requesterPhone: json['requester_phone'] as String?,
       status: _parseStatus(json['status'] as String),
       createdAt: DateTime.parse(json['created_at'] as String),
       expiresAt: DateTime.parse(json['expires_at'] as String),
